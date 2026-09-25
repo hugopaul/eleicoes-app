@@ -1,0 +1,249 @@
+--- PAGE 1 ---
+TSE-EA10-Arquivo-de-resultado-de-eleitos.md 2026-03-26
+1 / 6
+Divulgação de Resultados das Eleições
+Especificação de Arquivo
+EA10 – Arquivo de resultado de eleitos
+Sumário
+1. Conteúdo
+2. Nome do arquivo
+3. Representação do arquivo
+4. Dicionário de dados
+1. Conteúdo
+Esse arquivo contém o resultado de todos os candidatos eleitos a um determinado cargo e uma determinada
+abrangência. Por exemplo, esse arquivo contém as informações dos candidatos a Governador, Senador e
+Deputado Federal eleitos no País, em caso de eleição geral, e candidatos a prefeito eleitos na UF, em caso de
+eleição municipal.
+Esse arquivo estará presente apenas nas eleições gerais ordinárias e nas eleições municipais ordinárias. Não
+existindo para eleições suplementares nem consultas populares.
+Para Eleições Gerais Ordinárias, no primeiro turno, haverá um arquivo de abrangência BR para os cargos de
+Governador, Senador e Deputado Federal. Para o segundo turno, haverá somente o arquivo de Governador,
+caso, no mínimo, uma UF tenha eleição de Governador em segundo turno.
+Para as Eleições Municipais, tanto para primeiro e segundo turno, caso haja, haverá um arquivo de Prefeito
+para cada UF.
+2. Nome do arquivo
+O nome do arquivo obedece ao seguinte formato:
+<br|uf>-c<código do cargo>-e<número da eleição>-e.json
+Exemplos:
+br-c0003-e999999-e.json
+sp-c0011-e999999-e.json
+Onde:
+<br|uf>: Sigla da Unidade da Federação ou para Brasil a sigla “br”.
+<código do cargo>: Número do cargo com 4 dígitos. O número dos cargos é conhecido e descrito na
+tabela abaixo
+Código Cargo Tipo
+0003 Governador Majoritário
+
+--- PAGE 2 ---
+TSE-EA10-Arquivo-de-resultado-de-eleitos.md 2026-03-26
+2 / 6
+Código Cargo Tipo
+0005 Senador Majoritário
+0011 Prefeito Majoritário
+0006 Deputado FederalProporcional
+<número da eleição>: Número de controle identificador da eleição a que ser refere o arquivo.
+Composto por seis dígitos. É um número fixo para todos os arquivos de uma mesma eleição.
+3. Representação do arquivo
+e l e {inteiro}
+c d a b r {br|Sigla da UF}
+n m a b r {texto}
+t {1|2}
+f {s|o}
+c d c a r {inteiro}
+n m c a r {texto}
+d g {dd/mm/aaaa}
+h g {hh:mm:ss}
+i d g {inteiro}
+a b r       
+d t {dd/mm/aaaa}
+h t {hh:mm:ss}
+t p a b r {uf|mu}
+c d a b r {Sigla UF|Cód. Município}
+n m a b r {texto}
+t v a p {inteiro}
+s c v {s|n}
+e s a e {s|n}
+m n a e    
+c a n d    
+{texto}
+   
+n {inteiro}
+s q c a n d {inteiro}
+n m {texto}
+n m u {texto}
+s g p {texto}
+c o m {texto}
+v a p {inteiro}
+s e q {inteiro}
+v s       
+t p {v|s1|s2}
+s q c a n d {inteiro}
+n m {texto}
+n m u {texto}
+s g p {texto}
+{ 
+    "ele": "{inteiro}", 
+    "cdabr": "{br|Sigla da UF}", 
+    "nmabr": "{texto}", 
+    "t": "{1|2}", 
+    "f": "{s|o}", 
+    "cdcar": "{inteiro}", 
+    "nmcar": "{texto}", 
+    "dg": "{dd/mm/aaaa}", 
+    "hg": "{hh:mm:ss}", 
+    "idg": "{inteiro}", 
+    "abr": [ 
+      { 
+      "dt": "{dd/mm/aaaa}", 
+      "ht": "{hh:mm:ss}", 
+      "tpabr": "{uf|mu}", 
+      "cdabr": "{Sigla UF|Cód. Município}", 
+      "nmabr": "{texto}", 
+      "tvap": "{inteiro}", 
+      "scv": "{s|n}", 
+      "esae": "{s|n}", 
+      "mnae": [ 
+        "{texto}"     
+
+--- PAGE 3 ---
+TSE-EA10-Arquivo-de-resultado-de-eleitos.md 2026-03-26
+3 / 6
+        ], 
+      "cand": [ 
+        { 
+        "n": "{inteiro}", 
+        "sqcand": "{inteiro}", 
+        "nm": "{texto}", 
+        "nmu": "{texto}", 
+        "sgp": "{texto}", 
+        "com": "{texto}", 
+        "vap": "{inteiro}", 
+        "seq": "{inteiro}", 
+        "vs": [ 
+          { 
+          "tp": "{v|s1|s2}", 
+          "sqcand": "{inteiro}", 
+          "nm": "{texto}", 
+          "nmu": "{texto}", 
+          "sgp": "{texto}" 
+          } 
+        ] 
+       } 
+      ] 
+     } 
+    ] 
+} 
+4. Dicionário de dados
+Elemento: [raiz]
+Atributos
+ele Código da eleição. Código numérico identificador da eleição que está sendo divulgada.
+cdabr
+Código da abrangência. Determina qual a abrangência que pertence esse arquivo. Pode ser: 
+- A sigla br, indicando que esse arquivo se refere a resultado nacional;
+- A sigla da UF, indicando resultado de uma determinada Unidade da Federação.
+nmabr Nome descritivo da abrangência definida em cdabr. Pode ser a palavra Brasil ou o nome
+da Unidade da Federação.
+t
+Turno da eleição. Pode ser: 
+1 – primeiro turno
+2 – segundo turno
+f
+Fase em que foi gerado o arquivo. Pode ser:
+s - simulado, se o arquivo foi gerado durante o simulado.
+o – oficial, se o arquivo foi gerado com resultados reais da eleição.
+cdcar Número identificador do cargo.
+nmcar Nome do cargo.
+
+--- PAGE 4 ---
+TSE-EA10-Arquivo-de-resultado-de-eleitos.md 2026-03-26
+4 / 6
+Atributos
+dg Data da geração do arquivo no formato “dd/mm/aaaa”.
+hg Hora da geração do arquivo no formato “00:00:00”.
+idg Código identificador da geração do arquivo json.
+Elemento: abr
+Descrição: Abrangência onde o candidato se elegeu. Pode ser uma UF, para os cargos de Governador,
+Senador e Deputados, ou um Município, para o cargo de Prefeito.
+Conteúdo:
+Um elemento “cand” para cada candidato eleito na Abrangência.
+Em se tratando de Governador e Prefeito já eleito no primeiro turno, haverá apenas um
+elemento “cand”. Caso haja segundo turno, haverá dois elementos “cand”.
+Nos casos de Senador e Deputados, haverá quantos elementos “cand” forem o número de
+eleitos.
+Atributos
+dt Data da última Totalização na Abrangência
+ht Hora da última Totalização na Abrangência
+tpabr
+Informa o tipo de abrangência dos dados constantes nesse elemento. Pode ser:
+- uf: abrangência UF
+- mu: abrangência Municipal
+cdabr
+Código da abrangência. Código que determina, na abrangência, a qual unidade pertence o
+arquivo, podendo ser:
+- A sigla da UF, indicando que esse arquivo se refere ao resultado de uma determinada
+Unidade da Federação;
+- O código do Município, com 5 dígitos numéricos (preenchidos com zero à esquerda)
+nmabr Nome descritivo da abrangência definida em “codigoAbrangencia”. Pode ser a o nome da
+Unidade da Federação ou o nome do município.
+tvap
+Número total dos votos que foram atribuídos ou a algum candidato ou a alguma legenda. É
+a diferença entre os votos computados¹ e os votos brancos, nulos e pendentes. Também
+pode ser considerado como a soma dos votos nominais, votos de legenda, votos anulados e
+votos anulados sub judice.
+scv
+Indica se não existem candidatos para votar no cargo. Pode ser:
+s – Sim. Não existem candidatos para o cargo. Nesse caso, a lista de candidatos (no atributo
+“cand”) estará vazia.
+n – Não. Há candidatos para o cargo.
+
+--- PAGE 5 ---
+TSE-EA10-Arquivo-de-resultado-de-eleitos.md 2026-03-26
+5 / 6
+Atributos
+esae
+Eleição Sem Atribuição de Eleito - Indica o caso em que a totalização foi impossibilitada de
+atribuir eleitos para a eleição. O atributo estará presente após a totalização final. Os valores
+podem ser:
+- n - Houve atribuição de eleito(s) para a eleição;
+- s - Não houve atribuição de eleitos para a eleição.
+mnae
+Motivos de Não Atribuição de Eleito - Lista os motivos que impossibilitaram a atribuição
+de eleito para a eleição. O atributo estará presente após a totalização final. 
+Obs.: 
+- Esse campo só deverá ser preenchido em caso de não atribuição de eleito (esae=s).
+Elemento: cand
+Descrição: Contém dados referentes aos candidatos eleitos.
+Conteúdo:
+Para os cargos de Governador e Prefeito, um elemento “vs” representando o Vice.
+Para o cargo de Senador, um ou dois elementos “vs” representando o(s) suplente(s).
+Para o cargo de Deputado Federal o elemento “vs” é omitido.
+Atributos
+n Número do candidato.
+sqcand Sequencial do candidato. Identificador único do candidato.
+nm Nome do candidato
+nmu Nome do candidato que será apresentado na urna.
+sgp Sigla do partido.
+com
+Sigla dos partidos que compõem a coligação separada por uma barra “/”. Caso se trate de
+um partido isolado, haverá apenas a sigla do partido. Partidos com situação de inapto,
+apresentarão 2 asteriscos a sua direita.
+vap Quantidade de votos computados¹ para o candidato.
+seq Sequencial da ordem do candidato. Indica a ordem do mesmo na eleição
+Elemento: vs
+Descrição: Dados de Vice (para os cargos de Governador e Prefeito) e de Suplente (para o cargo de
+Senador). Esse elemento estará presente apenas para os cargos majoritários.
+Conteúdo: Não se aplica.
+Atributos
+tp Tipo, pode ser vice v, para os cargos de presidente, governador e prefeito, ou primeiro
+suplente s1 ou segundo suplente s2, para o cargo de senador.
+
+--- PAGE 6 ---
+TSE-EA10-Arquivo-de-resultado-de-eleitos.md 2026-03-26
+6 / 6
+Atributos
+sqcand Sequencial do candidato. Identificador único do candidato.
+nm Nome do candidato a vice ou suplente.
+nmu Nome do candidato a vice ou suplente, conforme apresentado na urna.
+sgp Sigla do partido a que pertence o candidato a vice ou suplente.
+¹Votos Computados: São os votos que foram destinados ao candidato ou partido pela urna eletrônica, antes
+de passar pela regras de totalização.

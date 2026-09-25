@@ -1,0 +1,675 @@
+const eleicoesEl = document.querySelector('#eleicoes');
+const filtroEleicaoEl = document.querySelector('#filtro-eleicao');
+const geracaoEl = document.querySelector('#geracao');
+const painelSecao = document.querySelector('#painel-secao');
+const painelEl = document.querySelector('#painel');
+const resultadoSecao = document.querySelector('#resultado-secao');
+const cargoEl = document.querySelector('#cargo');
+const ufCampo = document.querySelector('#uf-campo');
+const ufEl = document.querySelector('#uf');
+const municipioCampo = document.querySelector('#municipio-campo');
+const municipioEl = document.querySelector('#municipio');
+const candidatosEl = document.querySelector('#candidatos');
+const subtituloEleicaoEl = document.querySelector('#subtitulo-eleicao');
+const resumoEl = document.querySelector('#resumo-votos');
+const avisoEl = document.querySelector('#aviso');
+const eleicoesSecao = document.querySelector('#eleicoes-secao');
+const statusSecao = document.querySelector('#status-secao');
+const statusResumo = document.querySelector('#status-resumo');
+const statusArquivos = document.querySelector('#status-arquivos');
+const sincronizarBtn = document.querySelector('#sincronizar');
+const mapaBloco = document.querySelector('#mapa-bloco');
+const mapaSvg = document.querySelector('#mapa-brasil');
+const mapaDica = document.querySelector('#mapa-dica');
+const mapaNota = document.querySelector('#mapa-nota');
+const mapaLegenda = document.querySelector('#mapa-legenda');
+const mapaDetalhe = document.querySelector('#mapa-detalhe');
+const mapaTitulo = document.querySelector('#mapa-titulo');
+
+let eleicaoAtual = null;
+let eleicoesCarregadas = [];
+const TIPOS_ORDINARIOS = new Set([1, 3, 8]);
+const TIPOS_SUPLEMENTARES = new Set([2, 4, 9]);
+const TIPOS_CONSULTA = new Set([5, 6, 7]);
+let fase = 'simulado';
+let atualizacaoTimer = null;
+
+const UFS_PADRAO = ['ac', 'al', 'am', 'ap', 'ba', 'ce', 'df', 'es', 'go', 'ma', 'mg', 'ms', 'mt', 'pa', 'pb', 'pe', 'pi', 'pr', 'rj', 'rn', 'ro', 'rr', 'rs', 'sc', 'se', 'sp', 'to', 'zz'];
+const UFS_MAPA = UFS_PADRAO.filter((sigla) => sigla !== 'zz');
+const IBGE_UF = {
+  '11': 'ro', '12': 'ac', '13': 'am', '14': 'rr', '15': 'pa', '16': 'ap', '17': 'to',
+  '21': 'ma', '22': 'pi', '23': 'ce', '24': 'rn', '25': 'pb', '26': 'pe', '27': 'al', '28': 'se', '29': 'ba',
+  '31': 'mg', '32': 'es', '33': 'rj', '35': 'sp', '41': 'pr', '42': 'sc', '43': 'rs',
+  '50': 'ms', '51': 'mt', '52': 'go', '53': 'df',
+};
+const NOMES_UF = {
+  ac: 'Acre', al: 'Alagoas', am: 'Amazonas', ap: 'Amapá', ba: 'Bahia', ce: 'Ceará', df: 'Distrito Federal',
+  es: 'Espírito Santo', go: 'Goiás', ma: 'Maranhão', mg: 'Minas Gerais', ms: 'Mato Grosso do Sul',
+  mt: 'Mato Grosso', pa: 'Pará', pb: 'Paraíba', pe: 'Pernambuco', pi: 'Piauí', pr: 'Paraná',
+  rj: 'Rio de Janeiro', rn: 'Rio Grande do Norte', ro: 'Rondônia', rr: 'Roraima', rs: 'Rio Grande do Sul',
+  sc: 'Santa Catarina', se: 'Sergipe', sp: 'São Paulo', to: 'Tocantins',
+};
+const PALETA = ['#1b4f72', '#b03a2e', '#1e8449', '#b7950b', '#6c3483', '#d35400', '#148f77', '#1a5276', '#a93226', '#7d3c98', '#117a65', '#b9770e', '#2e4053'];
+const SEM_DADO = '#d5dde6';
+
+let malhaBrasil = null;
+let resultadosUf = new Map();
+let coresCandidato = new Map();
+let ufSelecionada = null;
+let filtroPedido = 0;
+let mapaPedido = 0;
+
+const numero = new Intl.NumberFormat('pt-BR');
+const percentual = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function comFase(caminho) {
+  const separador = caminho.includes('?') ? '&' : '?';
+  return `${caminho}${separador}fase=${fase}`;
+}
+
+async function obter(caminho) {
+  const resposta = await fetch(comFase(caminho));
+  const corpo = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    const erro = new Error(corpo.erro?.mensagem || 'Não foi possível carregar os dados.');
+    erro.codigo = corpo.erro?.codigo;
+    throw erro;
+  }
+  return corpo;
+}
+
+function textoGeracao(geracao) {
+  if (!geracao) return '';
+  const id = geracao.id ? ` · geração ${geracao.id}` : '';
+  return `${geracao.fase} · ${geracao.data ?? ''} ${geracao.hora ?? ''}${id}`;
+}
+
+function metrica(rotulo, valor, progresso) {
+  const bloco = document.createElement('article');
+  bloco.className = 'metrica';
+  const rotuloEl = document.createElement('span');
+  rotuloEl.className = 'suave';
+  rotuloEl.textContent = rotulo;
+  const valorEl = document.createElement('b');
+  valorEl.textContent = valor;
+  bloco.append(rotuloEl, valorEl);
+  if (progresso != null && Number.isFinite(progresso)) {
+    const trilho = document.createElement('span');
+    trilho.className = 'trilho';
+    const enchimento = document.createElement('span');
+    enchimento.className = 'enchimento';
+    enchimento.style.width = `${Math.max(0, Math.min(100, progresso))}%`;
+    trilho.append(enchimento);
+    bloco.append(trilho);
+  }
+  return bloco;
+}
+
+function chip(texto, destaque) {
+  const item = document.createElement('span');
+  item.className = 'chip';
+  if (destaque) {
+    const forte = document.createElement('b');
+    forte.textContent = destaque;
+    item.append(texto, ' ', forte);
+  } else {
+    item.textContent = texto;
+  }
+  return item;
+}
+
+function classeSituacao(candidato) {
+  const texto = (candidato.situacao ?? '').toLowerCase();
+  if (texto.includes('turno')) return 'segundo';
+  if (texto.startsWith('não') || texto.startsWith('nao')) return '';
+  if (candidato.eleito || texto.includes('eleito')) return 'eleito';
+  return '';
+}
+
+function aceitaFiltroEleicao(eleicao) {
+  const codigo = eleicao.tipo?.codigo;
+  if (filtroEleicaoEl.value === 'ordinaria') return TIPOS_ORDINARIOS.has(codigo);
+  if (filtroEleicaoEl.value === 'suplementar') return TIPOS_SUPLEMENTARES.has(codigo);
+  if (filtroEleicaoEl.value === 'consulta') return TIPOS_CONSULTA.has(codigo);
+  return true;
+}
+
+function pintarEleicoes() {
+  const itens = eleicoesCarregadas.filter(aceitaFiltroEleicao);
+  if (filtroEleicaoEl.value === 'todas') {
+    itens.sort((a, b) => Number(TIPOS_ORDINARIOS.has(b.tipo?.codigo)) - Number(TIPOS_ORDINARIOS.has(a.tipo?.codigo)));
+  }
+  eleicoesEl.replaceChildren();
+  if (!itens.length) {
+    const vazio = document.createElement('p');
+    vazio.className = 'resumo';
+    vazio.textContent = 'Nenhuma eleição deste tipo nesta fase.';
+    eleicoesEl.append(vazio);
+    return;
+  }
+  for (const eleicao of itens) {
+    const botao = document.createElement('button');
+    botao.className = 'cartao';
+    botao.type = 'button';
+    if (eleicaoAtual?.codigo === eleicao.codigo) botao.classList.add('ativo');
+    botao.innerHTML = `<strong></strong><span class="data"></span><span></span>`;
+    botao.querySelector('strong').textContent = eleicao.nome;
+    botao.querySelector('.data').textContent = eleicao.pleito?.data || 'Data não informada';
+    botao.querySelector('span:last-child').textContent = `${eleicao.turno}º turno · ${eleicao.tipo.descricao}`;
+    botao.addEventListener('click', () => selecionarEleicao(eleicao, botao));
+    eleicoesEl.append(botao);
+  }
+}
+
+async function carregarEleicoes() {
+  const dados = await obter('/api/v1/eleicoes?tamanho=200');
+  geracaoEl.textContent = textoGeracao(dados.geracao);
+  eleicoesCarregadas = dados.itens ?? [];
+  pintarEleicoes();
+}
+
+async function selecionarEleicao(eleicao, botao) {
+  eleicaoAtual = eleicao;
+  for (const cartao of eleicoesEl.querySelectorAll('.cartao')) cartao.classList.remove('ativo');
+  botao.classList.add('ativo');
+  painelSecao.hidden = false;
+  resultadoSecao.hidden = false;
+  avisoEl.hidden = true;
+
+  painelEl.replaceChildren();
+  try {
+    const painel = await obter(`/api/v1/eleicoes/${eleicao.codigo}/painel`);
+    const apuracao = painel.acompanhamento;
+    const secoesPct = apuracao.secoes.total
+      ? (apuracao.secoes.totalizadas / apuracao.secoes.total) * 100
+      : null;
+    painelEl.replaceChildren(
+      metrica('Andamento', apuracao.andamento?.replaceAll('_', ' ') ?? '—'),
+      metrica('Seções totalizadas', formatarPar(apuracao.secoes.totalizadas, apuracao.secoes.total), secoesPct),
+      metrica('Comparecimento', percentual.format(apuracao.eleitorado.comparecimentoPercentual ?? 0) + '%', apuracao.eleitorado.comparecimentoPercentual),
+      metrica('Abstenção', percentual.format(apuracao.eleitorado.abstencaoPercentual ?? 0) + '%', apuracao.eleitorado.abstencaoPercentual),
+    );
+  } catch (erro) {
+    painelEl.append(metrica('Apuração', erro.message));
+  }
+
+  cargoEl.replaceChildren();
+  for (const cargo of eleicao.cargos) {
+    const opcao = document.createElement('option');
+    opcao.value = cargo.codigo;
+    opcao.textContent = cargo.nome;
+    cargoEl.append(opcao);
+  }
+  await prepararUf();
+  await carregarResultado();
+}
+
+function eleicaoMunicipal() {
+  const tipo = Number(eleicaoAtual?.tipo?.codigo);
+  return tipo === 3 || tipo === 4;
+}
+
+async function prepararUf() {
+  const nacional = cargoEl.value === '0001';
+  ufCampo.hidden = nacional;
+  municipioCampo.hidden = !eleicaoMunicipal();
+  if (nacional) return;
+  ufEl.replaceChildren();
+  let ufs = UFS_PADRAO.map((sigla) => ({ sigla, nome: sigla.toUpperCase() }));
+  try {
+    const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/ufs`);
+    if (dados.itens?.length) ufs = dados.itens;
+  } catch {
+    // A eleição estadual do simulado não tem arquivo de municípios próprio.
+  }
+  for (const uf of ufs) {
+    const opcao = document.createElement('option');
+    opcao.value = uf.sigla;
+    opcao.textContent = uf.nome;
+    ufEl.append(opcao);
+  }
+  if (eleicaoMunicipal()) await prepararMunicipios();
+}
+
+async function prepararMunicipios() {
+  municipioEl.replaceChildren();
+  const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/ufs/${ufEl.value}/municipios?tamanho=1000`);
+  const ordenados = [...dados.itens].sort((a, b) => Number(b.capital) - Number(a.capital) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  for (const municipio of ordenados) {
+    const opcao = document.createElement('option');
+    opcao.value = municipio.codigo;
+    opcao.textContent = municipio.capital ? `${municipio.nome} (capital)` : municipio.nome;
+    municipioEl.append(opcao);
+  }
+}
+
+async function carregarResultado(atualizarMapa = true) {
+  avisoEl.hidden = true;
+  candidatosEl.replaceChildren();
+  resumoEl.textContent = '';
+  mostrarSubtituloEleicao();
+  const cargo = cargoEl.value;
+  if (eleicaoMunicipal() && !municipioEl.value) {
+    avisoEl.hidden = false;
+    avisoEl.textContent = 'Selecione um município. A lista aparece quando o arquivo de municípios desta eleição tiver sido baixado.';
+    if (atualizarMapa) await carregarMapa();
+    return;
+  }
+  const uf = cargo === '0001' ? '' : `?uf=${ufEl.value}${eleicaoMunicipal() ? `&municipio=${municipioEl.value}` : ''}`;
+  try {
+    const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/resultados/${cargo}${uf}`);
+    const votos = dados.votos ?? {};
+    const abrangencia = dados.abrangencia.codigo?.toUpperCase() === 'BR' ? 'Brasil' : dados.abrangencia.codigo?.toUpperCase();
+    resumoEl.replaceChildren(
+      chip(dados.cargo.nome),
+      chip(abrangencia || '—'),
+      chip((dados.andamento ?? '—').replaceAll('_', ' ')),
+      chip('votos', numero.format(votos.total ?? 0)),
+      chip('válidos', numero.format(votos.validos ?? 0)),
+      chip('brancos', numero.format(votos.brancos ?? 0)),
+      chip('nulos', numero.format(votos.nulos ?? 0)),
+    );
+    coresCandidato = new Map();
+    const maior = Math.max(...dados.candidatos.map((candidato) => candidato.votos ?? 0), 0);
+    dados.candidatos.forEach((candidato, indice) => {
+      const cartao = document.createElement('article');
+      const cor = corDo(candidato, indice);
+      const situacao = classeSituacao(candidato);
+      cartao.className = `resultado${indice === 0 ? ' lider' : ''}`;
+      cartao.style.setProperty('--cor', cor);
+
+      const topo = document.createElement('div');
+      topo.className = 'resultado-topo';
+      if (candidato.fotoUrl) {
+        const foto = document.createElement('img');
+        foto.className = 'foto';
+        foto.alt = '';
+        foto.src = candidato.fotoUrl;
+        foto.addEventListener('error', () => foto.remove());
+        topo.append(foto);
+      }
+      const posicao = document.createElement('span');
+      posicao.className = 'posicao';
+      posicao.textContent = String(indice + 1);
+      const identidade = document.createElement('div');
+      const nome = document.createElement('strong');
+      nome.textContent = `${candidato.numero ?? '—'} · ${candidato.nomeUrna || candidato.nome || 'Candidato'}`;
+      const detalhe = document.createElement('span');
+      detalhe.className = 'suave';
+      const vice = candidato.vices?.[0]?.nome ? ` · Vice ${candidato.vices[0].nome}` : '';
+      detalhe.textContent = `${candidato.partido?.sigla ?? 'Sem partido'}${vice}`;
+      identidade.append(nome, detalhe);
+      const numeros = document.createElement('div');
+      numeros.className = 'resultado-numeros';
+      const pct = document.createElement('b');
+      pct.textContent = `${percentual.format(candidato.votosPercentual ?? 0)}%`;
+      const qtd = document.createElement('span');
+      qtd.textContent = `${numero.format(candidato.votos ?? 0)} votos`;
+      numeros.append(pct, qtd);
+      const selo = document.createElement('span');
+      selo.className = `selo ${situacao}`.trim();
+      selo.textContent = candidato.situacao ?? '—';
+      topo.append(posicao, identidade, numeros, selo);
+
+      const trilho = document.createElement('span');
+      trilho.className = 'trilho';
+      const enchimento = document.createElement('span');
+      enchimento.className = 'enchimento';
+      enchimento.style.width = maior > 0 ? `${((candidato.votos ?? 0) / maior) * 100}%` : '0%';
+      trilho.append(enchimento);
+      cartao.append(topo, trilho);
+      candidatosEl.append(cartao);
+    });
+  } catch (erro) {
+    avisoEl.hidden = false;
+    avisoEl.textContent = erro.message;
+  }
+  if (atualizarMapa) await carregarMapa();
+}
+
+function mostrarSubtituloEleicao() {
+  if (!eleicaoAtual) {
+    subtituloEleicaoEl.hidden = true;
+    subtituloEleicaoEl.replaceChildren();
+    return;
+  }
+  const nome = document.createElement('strong');
+  nome.textContent = eleicaoAtual.nome;
+  const linha = document.createElement('span');
+  const data = eleicaoAtual.pleito?.data || 'Data não informada';
+  linha.textContent = `${data} · ${eleicaoAtual.turno}º turno · ${eleicaoAtual.tipo.descricao}`;
+  subtituloEleicaoEl.replaceChildren(nome, linha);
+  subtituloEleicaoEl.hidden = false;
+}
+
+function formatarPar(parte, total) {
+  if (parte == null || total == null) return '—';
+  return `${numero.format(parte)} / ${numero.format(total)}`;
+}
+
+function liderDe(resultado) {
+  const lista = [...(resultado?.candidatos ?? [])].sort((a, b) => (b.votos ?? 0) - (a.votos ?? 0));
+  return lista[0] ?? null;
+}
+
+function corDo(candidato, indice) {
+  const chave = candidato?.sequencial || candidato?.numero || String(indice);
+  if (!coresCandidato.has(chave)) coresCandidato.set(chave, PALETA[coresCandidato.size % PALETA.length]);
+  return coresCandidato.get(chave);
+}
+
+function aneisDe(geometria) {
+  if (geometria.type === 'Polygon') return geometria.coordinates;
+  if (geometria.type === 'MultiPolygon') return geometria.coordinates.flat();
+  return [];
+}
+
+function caminhoUf(aneis, projetar) {
+  return aneis.map((anel) => anel.map(([lon, lat], indice) => {
+    const [x, y] = projetar(lon, lat);
+    return `${indice === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
+  }).join(' ') + ' Z').join(' ');
+}
+
+async function garantirMalha() {
+  if (malhaBrasil) return malhaBrasil;
+  const resposta = await fetch('/brasil-ufs.geojson');
+  if (!resposta.ok) throw new Error('Não foi possível carregar o mapa.');
+  malhaBrasil = await resposta.json();
+  desenharMalha(malhaBrasil);
+  return malhaBrasil;
+}
+
+function desenharMalha(colecao) {
+  const pontos = colecao.features.flatMap((item) => aneisDe(item.geometry).flat());
+  const lons = pontos.map(([lon]) => lon);
+  const lats = pontos.map(([, lat]) => lat);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const largura = 1000;
+  const altura = 980;
+  const margem = 12;
+  const projetar = (lon, lat) => {
+    const x = margem + ((lon - minLon) / (maxLon - minLon)) * (largura - margem * 2);
+    const y = margem + ((maxLat - lat) / (maxLat - minLat)) * (altura - margem * 2);
+    return [x, y];
+  };
+
+  mapaSvg.replaceChildren();
+  for (const item of colecao.features) {
+    const sigla = IBGE_UF[String(item.properties.codarea)];
+    if (!sigla) continue;
+    const forma = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    forma.setAttribute('d', caminhoUf(aneisDe(item.geometry), projetar));
+    forma.setAttribute('class', 'uf');
+    forma.setAttribute('data-uf', sigla);
+    forma.setAttribute('tabindex', '0');
+    forma.setAttribute('role', 'button');
+    forma.setAttribute('aria-label', NOMES_UF[sigla]);
+    forma.dataset.fill = SEM_DADO;
+    forma.setAttribute('fill', SEM_DADO);
+    forma.addEventListener('mouseenter', (evento) => mostrarDica(sigla, evento));
+    forma.addEventListener('mousemove', (evento) => posicionarDica(evento));
+    forma.addEventListener('mouseleave', () => { mapaDica.hidden = true; });
+    forma.addEventListener('click', () => selecionarUf(sigla));
+    forma.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Enter' || evento.key === ' ') {
+        evento.preventDefault();
+        selecionarUf(sigla);
+      }
+    });
+    mapaSvg.append(forma);
+  }
+}
+
+function mostrarDica(sigla, evento) {
+  const resultado = resultadosUf.get(sigla);
+  const lider = liderDe(resultado);
+  const linha = lider
+    ? `${lider.nomeUrna || lider.nome} · ${percentual.format(lider.votosPercentual ?? 0)}%`
+    : 'Resultado ainda não publicado';
+  mapaDica.textContent = `${NOMES_UF[sigla]} · ${linha}`;
+  mapaDica.hidden = false;
+  posicionarDica(evento);
+}
+
+function posicionarDica(evento) {
+  const palco = mapaSvg.parentElement.getBoundingClientRect();
+  const x = Math.min(evento.clientX - palco.left + 12, palco.width - 180);
+  const y = Math.max(evento.clientY - palco.top - 36, 8);
+  mapaDica.style.left = `${x}px`;
+  mapaDica.style.top = `${y}px`;
+}
+
+async function selecionarUf(sigla) {
+  ufSelecionada = sigla;
+  const pedido = ++filtroPedido;
+  for (const forma of mapaSvg.querySelectorAll('.uf')) {
+    forma.classList.toggle('selecionada', forma.dataset.uf === sigla);
+  }
+  pintarDetalhe(sigla);
+  if (cargoEl.value === '0001') return;
+  if (![...ufEl.options].some((opcao) => opcao.value === sigla)) {
+    const opcao = document.createElement('option');
+    opcao.value = sigla;
+    opcao.textContent = NOMES_UF[sigla] ?? sigla.toUpperCase();
+    ufEl.append(opcao);
+  }
+  ufEl.value = sigla;
+  if (eleicaoMunicipal()) await prepararMunicipios();
+  if (pedido !== filtroPedido) return;
+  await carregarResultado(false);
+}
+
+function pintarDetalhe(sigla) {
+  mapaDetalhe.replaceChildren();
+  const resultado = resultadosUf.get(sigla);
+  const titulo = document.createElement('strong');
+  titulo.textContent = resultado?.municipioMapa
+    ? `${NOMES_UF[sigla] ?? sigla.toUpperCase()} · ${resultado.municipioMapa}`
+    : (NOMES_UF[sigla] ?? sigla.toUpperCase());
+  mapaDetalhe.append(titulo);
+  if (!resultado) {
+    const aviso = document.createElement('p');
+    aviso.className = 'resumo';
+    const nomeCargo = cargoEl.selectedOptions[0]?.textContent || 'cargo';
+    aviso.textContent = eleicaoMunicipal()
+      ? `A capital não teve disputa de ${nomeCargo.toLowerCase()} neste turno.`
+      : `O TSE ainda não publicou o resultado de ${nomeCargo.toLowerCase()} nesta unidade.`;
+    mapaDetalhe.append(aviso);
+    return;
+  }
+  const lista = [...resultado.candidatos].sort((a, b) => (b.votos ?? 0) - (a.votos ?? 0)).slice(0, 5);
+  const maior = Math.max(...lista.map((candidato) => candidato.votos ?? 0), 0);
+  for (const candidato of lista) {
+    const linha = document.createElement('div');
+    linha.className = 'mapa-linha';
+    const nome = document.createElement('span');
+    nome.textContent = `${candidato.numero} · ${candidato.nomeUrna || candidato.nome}`;
+    const pct = document.createElement('b');
+    pct.textContent = `${percentual.format(candidato.votosPercentual ?? 0)}%`;
+    pct.style.color = corDo(candidato, 0);
+    const trilho = document.createElement('span');
+    trilho.className = 'trilho';
+    const enchimento = document.createElement('span');
+    enchimento.className = 'enchimento';
+    enchimento.style.width = maior > 0 ? `${((candidato.votos ?? 0) / maior) * 100}%` : '0%';
+    enchimento.style.background = corDo(candidato, 0);
+    trilho.append(enchimento);
+    linha.append(nome, pct, trilho);
+    mapaDetalhe.append(linha);
+  }
+}
+
+function pintarMapa() {
+  for (const forma of mapaSvg.querySelectorAll('.uf')) {
+    const lider = liderDe(resultadosUf.get(forma.dataset.uf));
+    const cor = lider ? corDo(lider, 0) : SEM_DADO;
+    forma.dataset.fill = cor;
+    forma.setAttribute('fill', cor);
+  }
+}
+
+function montarLegenda() {
+  mapaLegenda.replaceChildren();
+  const vistos = new Map();
+  for (const resultado of resultadosUf.values()) {
+    const lider = liderDe(resultado);
+    if (!lider) continue;
+    const chave = lider.sequencial || lider.numero;
+    if (vistos.has(chave)) continue;
+    vistos.set(chave, lider);
+  }
+  if (vistos.size === 0) return;
+  for (const lider of vistos.values()) {
+    const item = document.createElement('li');
+    const amostra = document.createElement('span');
+    amostra.className = 'amostra';
+    amostra.style.background = corDo(lider, 0);
+    const texto = document.createElement('span');
+    texto.textContent = `${lider.numero} · ${lider.nomeUrna || lider.nome}`;
+    item.append(amostra, texto);
+    mapaLegenda.append(item);
+  }
+}
+
+async function carregarMapa() {
+  const cargo = cargoEl.value;
+  const nomeCargo = cargoEl.selectedOptions[0]?.textContent || 'Cargo';
+  mapaBloco.hidden = !(eleicaoAtual && cargo);
+  if (!eleicaoAtual || !cargo) return;
+  const pedido = ++mapaPedido;
+  mapaTitulo.textContent = `${nomeCargo} por estado`;
+  mapaNota.textContent = 'Carregando resultados das unidades da federação…';
+  mapaDetalhe.replaceChildren();
+  mapaLegenda.replaceChildren();
+  resultadosUf = new Map();
+  ufSelecionada = null;
+  try {
+    await garantirMalha();
+  } catch (erro) {
+    if (pedido === mapaPedido) mapaNota.textContent = erro.message;
+    return;
+  }
+  if (pedido !== mapaPedido) return;
+  const municipal = eleicaoMunicipal();
+  await Promise.all(UFS_MAPA.map(async (sigla) => {
+    try {
+      const dados = await resultadoParaMapa(cargo, sigla, municipal);
+      if (pedido === mapaPedido) resultadosUf.set(sigla, dados);
+    } catch {
+      if (pedido === mapaPedido) resultadosUf.delete(sigla);
+    }
+  }));
+  if (pedido !== mapaPedido) return;
+  pintarMapa();
+  montarLegenda();
+  const publicados = resultadosUf.size;
+  mapaNota.textContent = publicados
+    ? municipal
+      ? `${publicados} capitais com resultado de ${nomeCargo.toLowerCase()}. A cor é de quem está à frente na capital.`
+      : `${publicados} unidades com resultado de ${nomeCargo.toLowerCase()}. A cor é de quem está à frente em cada estado.`
+    : municipal
+      ? `O 2º turno municipal não tem total por estado. O mapa usa a capital quando ela teve disputa de ${nomeCargo.toLowerCase()}.`
+      : `O mapa segue o cargo ${nomeCargo}. Cada estado ganha cor quando o TSE publicar o resultado dessa UF.`;
+}
+
+async function resultadoParaMapa(cargo, sigla, municipal) {
+  if (!municipal) {
+    return obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/resultados/${cargo}?uf=${sigla}`);
+  }
+  const municipios = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/ufs/${sigla}/municipios?capital=true&tamanho=1`);
+  const capital = municipios.itens?.[0];
+  if (!capital) throw new Error('sem capital');
+  const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/resultados/${cargo}?uf=${sigla}&municipio=${capital.codigo}`);
+  dados.municipioMapa = capital.nome;
+  return dados;
+}
+
+filtroEleicaoEl.addEventListener('change', pintarEleicoes);
+
+cargoEl.addEventListener('change', async () => {
+  filtroPedido += 1;
+  await prepararUf();
+  await carregarResultado();
+});
+ufEl.addEventListener('change', async () => {
+  const pedido = ++filtroPedido;
+  if (eleicaoMunicipal()) await prepararMunicipios();
+  if (pedido !== filtroPedido) return;
+  carregarResultado(false);
+});
+municipioEl.addEventListener('change', () => carregarResultado(false));
+
+sincronizarBtn.addEventListener('click', async () => {
+  sincronizarBtn.disabled = true;
+  const resposta = await fetch('/api/v1/sincronizacao', { method: 'POST' });
+  const corpo = await resposta.json().catch(() => ({}));
+  await carregarStatus();
+  if (!resposta.ok) statusResumo.textContent = corpo.erro?.mensagem || 'Não foi possível sincronizar.';
+});
+
+function horaLocal(iso) {
+  if (!iso) return '—';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(iso));
+}
+
+async function carregarStatus() {
+  eleicoesSecao.hidden = true;
+  painelSecao.hidden = true;
+  resultadoSecao.hidden = true;
+  statusSecao.hidden = false;
+  const dados = await obter('/api/v1/sincronizacao');
+  const emAndamento = dados.executando ? ' · baixando agora' : '';
+  sincronizarBtn.disabled = dados.executando;
+  statusResumo.textContent = `Fase ${dados.fase} · consulta ao TSE ao iniciar e a cada 5 minutos · última carga ${horaLocal(dados.ultimoCiclo)} · ${dados.arquivos.length} arquivo(s)${emAndamento}`;
+  statusArquivos.replaceChildren();
+  for (const arquivo of dados.arquivos) {
+    const linha = document.createElement('tr');
+    linha.innerHTML = '<td></td><td></td><td></td><td></td><td></td><td></td>';
+    const celulas = linha.children;
+    celulas[0].textContent = arquivo.nome;
+    celulas[1].textContent = arquivo.tipo;
+    celulas[2].textContent = `${arquivo.geracao?.data ?? ''} ${arquivo.geracao?.hora ?? ''}`.trim() || '—';
+    celulas[3].textContent = arquivo.geracao?.id ?? '—';
+    celulas[4].textContent = horaLocal(arquivo.verificadoEm);
+    celulas[5].textContent = arquivo.estado;
+    statusArquivos.append(linha);
+  }
+}
+
+for (const aba of document.querySelectorAll('.aba')) {
+  aba.addEventListener('click', () => {
+    for (const item of document.querySelectorAll('.aba')) item.classList.remove('ativa');
+    aba.classList.add('ativa');
+    if (aba.dataset.visao === 'atualizacao') {
+      carregarStatus().catch((erro) => {
+        statusResumo.textContent = erro.message;
+      });
+      atualizacaoTimer = setInterval(() => {
+        carregarStatus().catch((erro) => {
+          statusResumo.textContent = erro.message;
+        });
+      }, 60000);
+      return;
+    }
+    if (atualizacaoTimer) clearInterval(atualizacaoTimer);
+    atualizacaoTimer = null;
+    fase = aba.dataset.fase;
+    eleicaoAtual = null;
+    statusSecao.hidden = true;
+    eleicoesSecao.hidden = false;
+    painelSecao.hidden = true;
+    resultadoSecao.hidden = true;
+    mapaBloco.hidden = true;
+    carregarEleicoes().catch((erro) => {
+      geracaoEl.textContent = erro.message;
+    });
+  });
+}
+
+carregarEleicoes().catch((erro) => {
+  geracaoEl.textContent = erro.message;
+});

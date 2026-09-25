@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eleições 2026</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topo">
+    <div>
+      <p class="marca">Divulgação</p>
+      <h1>Eleições 2026</h1>
+    </div>
+    <p id="geracao" class="geracao">Carregando catálogo…</p>
+  </header>
+
+  <nav class="abas">
+    <button type="button" class="aba ativa" data-fase="simulado">Simulado</button>
+    <button type="button" class="aba" data-fase="oficial">Oficial</button>
+    <button type="button" class="aba" data-visao="atualizacao">Atualização</button>
+  </nav>
+
+  <main>
+    <section id="eleicoes-secao">
+      <div class="cabecalho-resultado">
+        <h2>Eleições</h2>
+        <label>
+          Tipo
+          <select id="filtro-eleicao">
+            <option value="ordinaria" selected>Ordinárias</option>
+            <option value="suplementar">Suplementares</option>
+            <option value="consulta">Consultas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </label>
+      </div>
+      <div id="eleicoes" class="cartoes"></div>
+    </section>
+
+    <section id="painel-secao" hidden>
+      <h2>Apuração</h2>
+      <div id="painel" class="metricas"></div>
+    </section>
+
+    <section id="resultado-secao" hidden>
+      <div class="cabecalho-resultado">
+        <h2>Resultado</h2>
+        <div class="filtros">
+          <label>
+            Cargo
+            <select id="cargo"></select>
+          </label>
+          <label id="uf-campo" hidden>
+            UF
+            <select id="uf"></select>
+          </label>
+          <label id="municipio-campo" hidden>
+            Município
+            <select id="municipio"></select>
+          </label>
+        </div>
+      </div>
+      <p id="subtitulo-eleicao" class="subtitulo-eleicao" hidden></p>
+      <div id="resumo-votos" class="faixa-resumo"></div>
+      <div id="mapa-bloco" class="mapa-bloco" hidden>
+        <div class="mapa-palco">
+          <svg id="mapa-brasil" viewBox="0 0 1000 980" role="img" aria-label="Mapa do Brasil por unidade da federação"></svg>
+          <p id="mapa-dica" class="mapa-dica" hidden></p>
+        </div>
+        <aside class="mapa-lado">
+          <h3 id="mapa-titulo">Resultado por estado</h3>
+          <p id="mapa-nota" class="resumo"></p>
+          <ul id="mapa-legenda" class="legenda"></ul>
+          <div id="mapa-detalhe" class="mapa-detalhe"></div>
+        </aside>
+      </div>
+      <div id="candidatos" class="resultados"></div>
+      <p id="aviso" class="aviso" hidden></p>
+    </section>
+
+    <section id="status-secao" hidden>
+      <div class="cabecalho-resultado">
+        <h2>Última atualização dos arquivos</h2>
+        <button type="button" id="sincronizar" class="botao">Sincronizar agora</button>
+      </div>
+      <p id="status-resumo" class="resumo"></p>
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Arquivo</th>
+              <th>Tipo</th>
+              <th>Geração no TSE</th>
+              <th>Identificador</th>
+              <th>Carregado em</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="status-arquivos"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

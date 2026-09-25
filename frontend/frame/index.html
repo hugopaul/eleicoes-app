@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eleições 2026</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/frame.css">
+</head>
+<body class="frame">
+  <header class="frame-barra">
+    <p class="marca">Divulgação</p>
+    <div class="filtros">
+      <label>
+        Fase
+        <select id="fase">
+          <option value="simulado">Simulado</option>
+          <option value="oficial">Oficial</option>
+        </select>
+      </label>
+      <label>
+        Eleição
+        <select id="eleicao"></select>
+      </label>
+      <label>
+        Cargo
+        <select id="cargo"></select>
+      </label>
+      <label id="uf-campo" hidden>
+        UF
+        <select id="uf"></select>
+      </label>
+      <label id="municipio-campo" hidden>
+        Município
+        <select id="municipio"></select>
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <p id="aviso" class="aviso" hidden></p>
+    <div id="resumo-votos" class="faixa-resumo"></div>
+    <div id="mapa-bloco" class="mapa-bloco" hidden>
+      <div class="mapa-palco">
+        <svg id="mapa-brasil" viewBox="0 0 1000 980" role="img" aria-label="Mapa do Brasil por unidade da federação"></svg>
+        <p id="mapa-dica" class="mapa-dica" hidden></p>
+      </div>
+      <aside class="mapa-lado">
+        <h3 id="mapa-titulo">Resultado por estado</h3>
+        <p id="mapa-nota" class="resumo"></p>
+        <ul id="mapa-legenda" class="legenda"></ul>
+        <div id="mapa-detalhe" class="mapa-detalhe"></div>
+      </aside>
+    </div>
+    <div id="candidatos" class="resultados"></div>
+  </main>
+
+  <script src="/frame.js"></script>
+</body>
+</html>
