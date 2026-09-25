@@ -2,6 +2,10 @@ body.frame {
   background: transparent;
 }
 
+body.frame [hidden] {
+  display: none !important;
+}
+
 body.frame .frame-barra {
   display: flex;
   flex-wrap: wrap;
@@ -15,6 +19,18 @@ body.frame .frame-barra {
 
 body.frame .marca {
   margin: 0 0 0.35rem;
+}
+
+body.frame .frame-titulo {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+
+body.frame .frame-subtitulo {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
 }
 
 body.frame .frame-barra label {
@@ -46,4 +62,336 @@ body.frame .foto {
 
 body.frame .mapa-lado {
   padding: 0.75rem;
+}
+
+html:has(body.frame) {
+  height: 100%;
+}
+
+body.frame {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--fundo);
+}
+
+body.frame .frame-barra {
+  flex: none;
+}
+
+body.frame main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  padding: 0.65rem 0.75rem;
+}
+
+body.frame .apuracao-layout {
+  width: 100%;
+  max-width: 1140px;
+  margin-inline: auto;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+body.frame .coluna-resultado {
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: auto;
+  align-content: start;
+  padding-right: 0.15rem;
+}
+
+body.frame .resultado-resumo {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.55rem 0.7rem;
+  gap: 0.4rem;
+}
+
+body.frame .resultados {
+  gap: 0.35rem;
+}
+
+body.frame .resultado {
+  padding: 0.35rem 0.6rem 0.3rem;
+  border-radius: 10px;
+}
+
+body.frame .resultado-topo {
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  gap: 0.45rem;
+}
+
+body.frame .resultado-numeros,
+body.frame .selo {
+  grid-column: auto;
+  justify-self: end;
+  text-align: right;
+}
+
+body.frame .foto {
+  width: 1.7rem;
+  height: 2.15rem;
+}
+
+body.frame .posicao {
+  width: 1.45rem;
+  height: 1.45rem;
+  font-size: 0.75rem;
+}
+
+body.frame .resultado-topo > div {
+  min-width: 0;
+}
+
+body.frame .resultado-topo strong,
+body.frame .resultado-topo .suave {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.frame .resultado-topo strong {
+  font-size: 0.92rem;
+}
+
+body.frame .resultado-numeros b {
+  font-size: 1rem;
+}
+
+body.frame .resultado .trilho {
+  height: 0.35rem;
+  margin-top: 0.3rem;
+}
+
+body.frame-br .apuracao-layout {
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.9fr);
+}
+
+body.frame-br .mapa-bloco {
+  container-type: size;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+body.frame-br .mapa-palco {
+  flex: none;
+  height: auto;
+  padding: 0.35rem;
+}
+
+body.frame-br #mapa-brasil {
+  width: min(100%, calc((100cqh - 6.75rem) * 1000 / 980));
+  height: auto;
+  max-height: none;
+  margin-inline: auto;
+}
+
+body.frame-br .mapa-lado {
+  flex: none;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  align-content: start;
+  gap: 0.45rem;
+  padding: 0.55rem 0.7rem;
+}
+
+body.frame-br #mapa-detalhe:empty {
+  display: none;
+}
+
+body.frame-br #mapa-detalhe:not(:empty) {
+  order: -1;
+}
+
+body.frame-br .mapa-linha {
+  gap: 0.12rem 0.55rem;
+  font-size: 0.82rem;
+}
+
+body.frame-br .mapa-linha .trilho {
+  height: 0.28rem;
+}
+
+body.frame-df .apuracao-df {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+body.frame-df .mapa-df {
+  align-self: start;
+  min-width: 0;
+  height: auto;
+  display: block;
+}
+
+body.frame-df .mapa-df .mapa-palco {
+  width: min(25vw, 100%);
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: hidden;
+  background: #eef3f8;
+}
+
+.mapa-df .mapa-palco {
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: hidden;
+  background: #eef3f8;
+}
+
+.mapa-df svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.recorte {
+  fill: #d5dde6;
+  stroke: #b7c4d1;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.recorte-placa {
+  fill: #ffffff;
+  stroke: #ffffff;
+  stroke-width: 16;
+  stroke-linejoin: round;
+}
+
+.recorte-df {
+  fill: #0b3a6a;
+  stroke: #ffffff;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+
+.recorte-sigla,
+.recorte-df-nome {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-family: "Segoe UI", sans-serif;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.recorte-sigla {
+  fill: #5c6b7a;
+  font-size: 28px;
+  letter-spacing: 0.08em;
+}
+
+.recorte-df-nome {
+  fill: white;
+  font-size: 44px;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 800px) {
+  body.frame {
+    height: auto;
+    min-height: 100%;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  body.frame .frame-barra {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    padding: 0.7rem 0.75rem;
+  }
+
+  body.frame .marca {
+    margin: 0;
+  }
+
+  body.frame .filtros {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.55rem;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  body.frame .filtros label {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  body.frame .filtros select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    text-overflow: ellipsis;
+  }
+
+  body.frame main {
+    display: grid;
+    flex: none;
+  }
+
+  body.frame .apuracao-layout {
+    display: grid;
+    height: auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  body.frame .mapa-bloco,
+  body.frame .coluna-resultado {
+    display: grid;
+    height: auto;
+    overflow: visible;
+  }
+
+  body.frame-br .mapa-bloco {
+    container-type: normal;
+    display: grid;
+    overflow: visible;
+  }
+
+  body.frame-br .mapa-palco {
+    height: auto;
+  }
+
+  body.frame-br #mapa-brasil {
+    width: min(100%, 36rem);
+    height: auto;
+    max-height: none;
+  }
+
+  body.frame-br .mapa-lado {
+    max-height: none;
+  }
+
+  body.frame .resultado-resumo {
+    position: static;
+  }
+
+  body.frame-df .mapa-df .mapa-palco {
+    width: min(100%, 25vh, 18rem);
+    height: auto;
+    margin-inline: auto;
+  }
 }

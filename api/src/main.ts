@@ -8,7 +8,12 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('api/v1');
+  const pastaFrontend = join(__dirname, '..', '..', 'frontend');
   app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.method === 'GET' && /^\/frame\/brasilia\/?$/.test(req.path)) {
+      res.sendFile(join(pastaFrontend, 'frame', 'brasilia', 'index.html'));
+      return;
+    }
     const codigo = req.path.match(/^\/frame\/(\d+)\/?$/)?.[1];
     if (req.method === 'GET' && codigo) {
       const busca = new URLSearchParams();
@@ -21,7 +26,7 @@ async function bootstrap() {
     }
     next();
   });
-  app.useStaticAssets(join(__dirname, '..', '..', 'frontend'));
+  app.useStaticAssets(pastaFrontend);
   app.enableCors({ origin: process.env.FRONTEND_ORIGIN ?? true, methods: ['GET', 'POST', 'OPTIONS'] });
   await app.listen(process.env.PORT ?? 3000);
 }

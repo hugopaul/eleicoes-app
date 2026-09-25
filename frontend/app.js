@@ -11,6 +11,8 @@ const municipioCampo = document.querySelector('#municipio-campo');
 const municipioEl = document.querySelector('#municipio');
 const candidatosEl = document.querySelector('#candidatos');
 const subtituloEleicaoEl = document.querySelector('#subtitulo-eleicao');
+const resultadoResumo = document.querySelector('#resultado-resumo');
+const resultadoTitulo = document.querySelector('#resultado-titulo');
 const resumoEl = document.querySelector('#resumo-votos');
 const avisoEl = document.querySelector('#aviso');
 const eleicoesSecao = document.querySelector('#eleicoes-secao');
@@ -58,6 +60,8 @@ let coresCandidato = new Map();
 let ufSelecionada = null;
 let filtroPedido = 0;
 let mapaPedido = 0;
+let municipiosPedido = 0;
+let ajustandoFiltro = false;
 
 const numero = new Intl.NumberFormat('pt-BR');
 const percentual = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -232,21 +236,30 @@ async function prepararUf() {
 }
 
 async function prepararMunicipios() {
+  const sigla = String(ufEl.value || '').toLowerCase();
+  const pedido = ++municipiosPedido;
   municipioEl.replaceChildren();
-  const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/ufs/${ufEl.value}/municipios?tamanho=1000`);
-  const ordenados = [...dados.itens].sort((a, b) => Number(b.capital) - Number(a.capital) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/ufs/${sigla}/municipios?tamanho=1000`);
+  if (pedido !== municipiosPedido || String(ufEl.value || '').toLowerCase() !== sigla) return false;
+  const ordenados = [...(dados.itens ?? [])].sort((a, b) => Number(b.capital) - Number(a.capital) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  let capital = '';
   for (const municipio of ordenados) {
     const opcao = document.createElement('option');
     opcao.value = municipio.codigo;
     opcao.textContent = municipio.capital ? `${municipio.nome} (capital)` : municipio.nome;
+    if (municipio.capital) capital = municipio.codigo;
     municipioEl.append(opcao);
   }
+  if (capital) municipioEl.value = capital;
+  else if (municipioEl.options.length) municipioEl.selectedIndex = 0;
+  return true;
 }
 
 async function carregarResultado(atualizarMapa = true) {
   avisoEl.hidden = true;
   candidatosEl.replaceChildren();
-  resumoEl.textContent = '';
+  resumoEl.replaceChildren();
+  resultadoResumo.hidden = true;
   mostrarSubtituloEleicao();
   const cargo = cargoEl.value;
   if (eleicaoMunicipal() && !municipioEl.value) {
@@ -260,6 +273,8 @@ async function carregarResultado(atualizarMapa = true) {
     const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/resultados/${cargo}${uf}`);
     const votos = dados.votos ?? {};
     const abrangencia = dados.abrangencia.codigo?.toUpperCase() === 'BR' ? 'Brasil' : dados.abrangencia.codigo?.toUpperCase();
+    resultadoTitulo.textContent = dados.totalizacaoFinal ? 'Resultado definido' : 'Resultado preliminar';
+    resultadoResumo.hidden = false;
     resumoEl.replaceChildren(
       chip(dados.cargo.nome),
       chip(abrangencia || '—'),
@@ -443,24 +458,46 @@ function posicionarDica(evento) {
   mapaDica.style.top = `${y}px`;
 }
 
-async function selecionarUf(sigla) {
-  ufSelecionada = sigla;
-  const pedido = ++filtroPedido;
+function marcarUfSelecionada(sigla) {
+  const alvo = String(sigla || '').toLowerCase();
+  ufSelecionada = alvo || null;
   for (const forma of mapaSvg.querySelectorAll('.uf')) {
-    forma.classList.toggle('selecionada', forma.dataset.uf === sigla);
+    forma.classList.toggle('selecionada', Boolean(alvo) && forma.dataset.uf === alvo);
   }
-  pintarDetalhe(sigla);
-  if (cargoEl.value === '0001') return;
-  if (![...ufEl.options].some((opcao) => opcao.value === sigla)) {
-    const opcao = document.createElement('option');
-    opcao.value = sigla;
-    opcao.textContent = NOMES_UF[sigla] ?? sigla.toUpperCase();
+}
+
+function definirUf(sigla) {
+  const alvo = String(sigla || '').toLowerCase();
+  let opcao = [...ufEl.options].find((item) => item.value.toLowerCase() === alvo);
+  if (!opcao) {
+    opcao = document.createElement('option');
+    opcao.value = alvo;
+    opcao.textContent = NOMES_UF[alvo] ?? alvo.toUpperCase();
     ufEl.append(opcao);
   }
-  ufEl.value = sigla;
-  if (eleicaoMunicipal()) await prepararMunicipios();
-  if (pedido !== filtroPedido) return;
-  await carregarResultado(false);
+  if (ufEl.value === opcao.value) return;
+  ajustandoFiltro = true;
+  ufEl.value = opcao.value;
+  ajustandoFiltro = false;
+}
+
+async function selecionarUf(sigla) {
+  const pedido = ++filtroPedido;
+  marcarUfSelecionada(sigla);
+  pintarDetalhe(sigla);
+  if (cargoEl.value === '0001') return;
+  try {
+    definirUf(sigla);
+    if (eleicaoMunicipal()) {
+      const ok = await prepararMunicipios();
+      if (!ok || pedido !== filtroPedido) return;
+    } else if (pedido !== filtroPedido) return;
+    await carregarResultado(false);
+  } catch (erro) {
+    if (pedido !== filtroPedido) return;
+    avisoEl.hidden = false;
+    avisoEl.textContent = erro.message;
+  }
 }
 
 function pintarDetalhe(sigla) {
@@ -546,7 +583,6 @@ async function carregarMapa() {
   mapaDetalhe.replaceChildren();
   mapaLegenda.replaceChildren();
   resultadosUf = new Map();
-  ufSelecionada = null;
   try {
     await garantirMalha();
   } catch (erro) {
@@ -566,6 +602,7 @@ async function carregarMapa() {
   if (pedido !== mapaPedido) return;
   pintarMapa();
   montarLegenda();
+  marcarUfSelecionada(ufCampo.hidden ? '' : ufEl.value);
   const publicados = resultadosUf.size;
   mapaNota.textContent = publicados
     ? municipal
@@ -596,10 +633,21 @@ cargoEl.addEventListener('change', async () => {
   await carregarResultado();
 });
 ufEl.addEventListener('change', async () => {
+  if (ajustandoFiltro) return;
   const pedido = ++filtroPedido;
-  if (eleicaoMunicipal()) await prepararMunicipios();
-  if (pedido !== filtroPedido) return;
-  carregarResultado(false);
+  marcarUfSelecionada(ufEl.value);
+  pintarDetalhe((ufEl.value || '').toLowerCase());
+  try {
+    if (eleicaoMunicipal()) {
+      const ok = await prepararMunicipios();
+      if (!ok || pedido !== filtroPedido) return;
+    } else if (pedido !== filtroPedido) return;
+    carregarResultado(false);
+  } catch (erro) {
+    if (pedido !== filtroPedido) return;
+    avisoEl.hidden = false;
+    avisoEl.textContent = erro.message;
+  }
 });
 municipioEl.addEventListener('change', () => carregarResultado(false));
 

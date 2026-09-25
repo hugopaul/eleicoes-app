@@ -62,20 +62,27 @@
         </div>
       </div>
       <p id="subtitulo-eleicao" class="subtitulo-eleicao" hidden></p>
-      <div id="resumo-votos" class="faixa-resumo"></div>
-      <div id="mapa-bloco" class="mapa-bloco" hidden>
-        <div class="mapa-palco">
-          <svg id="mapa-brasil" viewBox="0 0 1000 980" role="img" aria-label="Mapa do Brasil por unidade da federação"></svg>
-          <p id="mapa-dica" class="mapa-dica" hidden></p>
+      <div class="apuracao-layout">
+        <div id="mapa-bloco" class="mapa-bloco" hidden>
+          <div class="mapa-palco">
+            <svg id="mapa-brasil" viewBox="0 0 1000 980" role="img" aria-label="Mapa do Brasil por unidade da federação"></svg>
+            <p id="mapa-dica" class="mapa-dica" hidden></p>
+          </div>
+          <aside class="mapa-lado">
+            <h3 id="mapa-titulo">Resultado por estado</h3>
+            <p id="mapa-nota" class="resumo"></p>
+            <ul id="mapa-legenda" class="legenda"></ul>
+            <div id="mapa-detalhe" class="mapa-detalhe"></div>
+          </aside>
         </div>
-        <aside class="mapa-lado">
-          <h3 id="mapa-titulo">Resultado por estado</h3>
-          <p id="mapa-nota" class="resumo"></p>
-          <ul id="mapa-legenda" class="legenda"></ul>
-          <div id="mapa-detalhe" class="mapa-detalhe"></div>
-        </aside>
+        <div class="coluna-resultado">
+          <section id="resultado-resumo" class="resultado-resumo" hidden>
+            <h3 id="resultado-titulo">Resultado</h3>
+            <div id="resumo-votos" class="faixa-resumo"></div>
+          </section>
+          <div id="candidatos" class="resultados"></div>
+        </div>
       </div>
-      <div id="candidatos" class="resultados"></div>
       <p id="aviso" class="aviso" hidden></p>
     </section>
 

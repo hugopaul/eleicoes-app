@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Eleições 2026</title>
+  <title>Eleições 2026 · Distrito Federal</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/frame.css">
 </head>
-<body class="frame frame-br">
+<body class="frame frame-df">
   <header class="frame-barra">
-    <p class="marca">Divulgação</p>
+    <div>
+      <p class="marca">Divulgação</p>
+      <h1 class="frame-titulo">Distrito Federal</h1>
+      <p id="eleicao-nome" class="frame-subtitulo"></p>
+    </div>
     <div class="filtros">
       <label>
         Fase
@@ -18,7 +22,7 @@
           <option value="oficial">Oficial</option>
         </select>
       </label>
-      <label>
+      <label id="eleicao-campo" hidden>
         Eleição
         <select id="eleicao"></select>
       </label>
@@ -26,31 +30,16 @@
         Cargo
         <select id="cargo"></select>
       </label>
-      <label id="uf-campo" hidden>
-        UF
-        <select id="uf"></select>
-      </label>
-      <label id="municipio-campo" hidden>
-        Município
-        <select id="municipio"></select>
-      </label>
     </div>
   </header>
 
   <main>
     <p id="aviso" class="aviso" hidden></p>
-    <div class="apuracao-layout">
-      <div id="mapa-bloco" class="mapa-bloco" hidden>
+    <div class="apuracao-layout apuracao-df">
+      <div id="mapa-bloco" class="mapa-bloco mapa-df">
         <div class="mapa-palco">
-          <svg id="mapa-brasil" viewBox="0 0 1000 980" role="img" aria-label="Mapa do Brasil por unidade da federação"></svg>
-          <p id="mapa-dica" class="mapa-dica" hidden></p>
+          <svg id="mapa-df" viewBox="0 0 640 640" role="img" aria-label="Recorte do Brasil com o Distrito Federal ampliado"></svg>
         </div>
-        <aside class="mapa-lado">
-          <h3 id="mapa-titulo">Resultado por estado</h3>
-          <p id="mapa-nota" class="resumo"></p>
-          <ul id="mapa-legenda" class="legenda"></ul>
-          <div id="mapa-detalhe" class="mapa-detalhe"></div>
-        </aside>
       </div>
       <div class="coluna-resultado">
         <section id="resultado-resumo" class="resultado-resumo" hidden>
@@ -62,6 +51,6 @@
     </div>
   </main>
 
-  <script src="/frame.js"></script>
+  <script src="/frame-brasilia.js"></script>
 </body>
 </html>
