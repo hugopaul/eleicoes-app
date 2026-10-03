@@ -1,7 +1,9 @@
-import { Controller, Get, Inject, Param, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { paginar, semAcento } from '../common/util';
+import { Eleicao } from '../store/model';
 import { ElectionStore } from '../store/election-store';
+import { ChaveEleicao, SelecaoEleicoes } from '../store/selecao-eleicoes';
 import { AgendadorTse } from '../sync/agendador';
 import { ordenarCandidatos } from '../store/parse';
 import { enviar, erro } from './resposta';
@@ -12,16 +14,36 @@ export class EleicoesController {
     private readonly store: ElectionStore,
     @Inject('STORE_OFICIAL') private readonly oficial: ElectionStore,
     private readonly agendador: AgendadorTse,
+    private readonly selecao: SelecaoEleicoes,
   ) {}
 
   private loja(fase?: string) {
     return fase === 'oficial' ? this.oficial : this.store;
   }
 
+  @Get('gestao')
+  gestao() {
+    return { itens: this.catalogoCompleto() };
+  }
+
+  @Post('gestao')
+  @HttpCode(200)
+  salvarGestao(@Body() corpo: { ativas?: Array<{ fase?: string; codigo?: string }> }) {
+    if (!Array.isArray(corpo?.ativas)) erro('PARAMETRO_INVALIDO', 'Informe a lista de eleições ativas.', 400);
+    const ativas: ChaveEleicao[] = [];
+    for (const item of corpo.ativas) {
+      if (item?.fase !== 'simulado' && item?.fase !== 'oficial') erro('PARAMETRO_INVALIDO', 'Cada eleição precisa da fase simulado ou oficial.', 400);
+      if (!/^\d+$/.test(String(item.codigo ?? ''))) erro('PARAMETRO_INVALIDO', 'Cada eleição precisa de um código numérico.', 400);
+      ativas.push({ fase: item.fase, codigo: String(item.codigo) });
+    }
+    this.selecao.aplicar(this.catalogoCompleto(), ativas);
+    return { itens: this.catalogoCompleto() };
+  }
+
   @Get()
   listar(@Query('turno') turno?: string, @Query('tipo') tipo?: string, @Query('pleito') pleito?: string, @Query('pagina') pagina?: string, @Query('tamanho') tamanho?: string, @Query('fase') fase?: string) {
     const loja = this.loja(fase);
-    let itens = loja.eleicoes.map(resumo);
+    let itens = loja.eleicoes.filter((item) => this.selecao.ativa(loja.geracaoCatalogo.fase, item.codigo)).map(resumo);
     if (turno) itens = itens.filter((item) => item.turno === Number(turno));
     if (tipo) itens = itens.filter((item) => item.tipo.codigo === Number(tipo));
     if (pleito) itens = itens.filter((item) => item.pleito.codigo === pleito);
@@ -178,10 +200,18 @@ export class EleicoesController {
     return { ...eleicao, geracao: this.store.geracaoCatalogo };
   }
 
+  private catalogoCompleto() {
+    return [
+      ...this.store.eleicoes.map((item) => itemGestao(item, 'simulado', this.selecao)),
+      ...this.oficial.eleicoes.map((item) => itemGestao(item, 'oficial', this.selecao)),
+    ];
+  }
+
   private exigirEleicao(codigo: string, fase?: string) {
     const loja = this.loja(fase);
     const eleicao = loja.eleicao(codigo);
     if (!eleicao) erro('NAO_ENCONTRADO', `Eleição ${codigo} não está no catálogo da fase ${loja.geracaoCatalogo.fase}.`, 404);
+    if (!this.selecao.ativa(loja.geracaoCatalogo.fase, codigo)) erro('NAO_ENCONTRADO', `Eleição ${codigo} não está ativa.`, 404);
     return eleicao!;
   }
 
@@ -219,6 +249,23 @@ export class EleicoesController {
     const mun = this.store.municipio(eleicao, codigo);
     return mun?.uf.sigla === uf.toLowerCase();
   }
+}
+
+function anoDaEleicao(eleicao: { nome: string; pleito: { data?: string; ciclo?: string } }) {
+  return eleicao.pleito.ciclo?.match(/20\d{2}/)?.[0]
+    ?? eleicao.pleito.data?.match(/20\d{2}/)?.[0]
+    ?? eleicao.nome.match(/20\d{2}/)?.[0]
+    ?? '';
+}
+
+function itemGestao(eleicao: Eleicao, fase: 'simulado' | 'oficial', selecao: SelecaoEleicoes) {
+  return {
+    ...resumo(eleicao),
+    fase,
+    ano: anoDaEleicao(eleicao),
+    origem: fase === 'oficial' ? 'oficial/ele-c.json' : 'simulado/ele-c.json',
+    ativa: selecao.ativa(fase, eleicao.codigo),
+  };
 }
 
 function resumo(eleicao: { codigo: string; codigoSegundoTurno?: string; sequencial?: string; nome: string; turno: number; tipo: { codigo: number; descricao: string }; pleito: { codigo: string; data?: string; dataLimiteDivulgacao?: string; ciclo?: string }; cargos: unknown[] }) {

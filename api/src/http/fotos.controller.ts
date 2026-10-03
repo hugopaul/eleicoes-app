@@ -3,6 +3,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { Response } from 'express';
 import { ElectionStore } from '../store/election-store';
+import { SelecaoEleicoes } from '../store/selecao-eleicoes';
 import { obterFotoLocal } from '../sync/fotos';
 
 const PASTA = process.env.FOTOS_DIR ?? join(__dirname, '..', '..', 'data', 'fotos');
@@ -12,6 +13,7 @@ export class FotosController {
   constructor(
     private readonly store: ElectionStore,
     @Inject('STORE_OFICIAL') private readonly oficial: ElectionStore,
+    private readonly selecao: SelecaoEleicoes,
   ) {}
 
   @Get(':fase/:eleicao/:uf/:arquivo')
@@ -23,6 +25,10 @@ export class FotosController {
     @Res() res: Response,
   ) {
     if (!/^(simulado|oficial)$/.test(fase) || !/^\d{1,6}$/.test(eleicao) || !/^[a-z]{2}$/.test(uf) || !/^\d+\.jpeg$/.test(arquivo)) {
+      res.status(404).end();
+      return;
+    }
+    if (!this.selecao.ativa(fase, eleicao)) {
       res.status(404).end();
       return;
     }

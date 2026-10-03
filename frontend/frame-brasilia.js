@@ -2,7 +2,7 @@ const UF = 'df';
 const CAMINHO = '/frame/brasilia';
 const CARGOS_DF = new Set(['0003', '0005', '0006', '0008']);
 
-let fase = new URLSearchParams(location.search).get('fase') === 'oficial' ? 'oficial' : 'simulado';
+let fase = new URLSearchParams(location.search).get('fase') === 'simulado' ? 'simulado' : 'oficial';
 let origemUrl = true;
 let pedido = 0;
 
@@ -87,7 +87,7 @@ function lerFiltros() {
   const atuais = new URLSearchParams(location.search);
   const cargo = atuais.get('cargo') || '';
   return {
-    fase: atuais.get('fase') === 'oficial' ? 'oficial' : 'simulado',
+    fase: atuais.get('fase') === 'simulado' ? 'simulado' : 'oficial',
     eleicao: atuais.get('eleicao') || '',
     cargo: cargo ? cargo.padStart(4, '0') : '',
   };
@@ -204,9 +204,6 @@ async function carregarResultado() {
         foto.addEventListener('error', () => foto.remove());
         topo.append(foto);
       }
-      const posicao = document.createElement('span');
-      posicao.className = 'posicao';
-      posicao.textContent = String(indice + 1);
       const identidade = document.createElement('div');
       const nome = document.createElement('strong');
       nome.textContent = `${candidato.numero ?? '—'} · ${candidato.nomeUrna || candidato.nome || 'Candidato'}`;
@@ -225,7 +222,7 @@ async function carregarResultado() {
       const selo = document.createElement('span');
       selo.className = `selo ${classeSituacao(candidato)}`.trim();
       selo.textContent = candidato.situacao ?? '—';
-      topo.append(posicao, identidade, numeros, selo);
+      topo.append(identidade, numeros, selo);
 
       const trilho = document.createElement('span');
       trilho.className = 'trilho';

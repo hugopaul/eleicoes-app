@@ -102,4 +102,34 @@ describe('API de eleições', () => {
     const res = await request(app.getHttpServer()).get('/api/v1/pleitos/17801/ufs/ac/secoes').expect(400);
     expect(res.body.erro.codigo).toBe('PARAMETRO_INVALIDO');
   });
+
+  it('restringe listas e resultados às eleições marcadas como ativas', async () => {
+    const gestao = await request(app.getHttpServer()).get('/api/v1/eleicoes/gestao').expect(200);
+    const simulado = gestao.body.itens.filter((item: { fase: string }) => item.fase === 'simulado');
+    const oficial = gestao.body.itens.filter((item: { fase: string }) => item.fase === 'oficial');
+    expect(simulado.map((item: { codigo: string }) => item.codigo).sort()).toEqual(['21270', '21272', '21274']);
+    expect(simulado.every((item: { ativa: boolean; ano: string }) => item.ativa && item.ano === '2026')).toBe(true);
+    expect(oficial.some((item: { codigo: string; ano: string; origem: string }) => item.codigo === '619' && item.ano === '2024' && item.origem === 'oficial/ele-c.json')).toBe(true);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/eleicoes/gestao')
+      .send({ ativas: [{ fase: 'simulado', codigo: '21270' }] })
+      .expect(200);
+
+    const lista = await request(app.getHttpServer()).get('/api/v1/eleicoes?tamanho=200').expect(200);
+    expect(lista.body.itens.map((item: { codigo: string }) => item.codigo)).toEqual(['21270']);
+    const oficialLista = await request(app.getHttpServer()).get('/api/v1/eleicoes?fase=oficial&tamanho=200').expect(200);
+    expect(oficialLista.body.total).toBe(0);
+    const bloqueada = await request(app.getHttpServer()).get('/api/v1/eleicoes/21272/resultados/0003?uf=ac').expect(404);
+    expect(bloqueada.body.erro.mensagem).toContain('não está ativa');
+    const pleito = await request(app.getHttpServer()).get('/api/v1/pleitos/17801').expect(200);
+    expect(pleito.body.eleicoes.map((item: { codigo: string }) => item.codigo)).toEqual(['21270']);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/eleicoes/gestao')
+      .send({ ativas: gestao.body.itens.map((item: { fase: 'simulado' | 'oficial'; codigo: string }) => ({ fase: item.fase, codigo: item.codigo })) })
+      .expect(200);
+    const restaurada = await request(app.getHttpServer()).get('/api/v1/eleicoes?tamanho=200').expect(200);
+    expect(restaurada.body.total).toBe(3);
+  });
 });

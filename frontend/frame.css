@@ -128,7 +128,7 @@ body.frame .resultado {
 }
 
 body.frame .resultado-topo {
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 0.45rem;
 }
 
@@ -142,12 +142,6 @@ body.frame .selo {
 body.frame .foto {
   width: 1.7rem;
   height: 2.15rem;
-}
-
-body.frame .posicao {
-  width: 1.45rem;
-  height: 1.45rem;
-  font-size: 0.75rem;
 }
 
 body.frame .resultado-topo > div {

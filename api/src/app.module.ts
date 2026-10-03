@@ -6,6 +6,7 @@ import { FotosController } from './http/fotos.controller';
 import { OutrosController } from './http/outros.controller';
 import { ElectionStore } from './store/election-store';
 import { carregarAmostras } from './store/load-samples';
+import { SelecaoEleicoes } from './store/selecao-eleicoes';
 import { AgendadorTse } from './sync/agendador';
 import { join } from 'path';
 
@@ -21,6 +22,7 @@ carregarAmostras(storeOficial, process.env.SAMPLES_OFICIAL_DIR ?? raizAmostras);
     ErroFilter,
     { provide: ElectionStore, useValue: store },
     { provide: 'STORE_OFICIAL', useValue: storeOficial },
+    SelecaoEleicoes,
     AgendadorTse,
     { provide: APP_FILTER, useClass: ErroFilter },
   ],

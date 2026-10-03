@@ -19,6 +19,7 @@
     <button type="button" class="aba ativa" data-fase="simulado">Simulado</button>
     <button type="button" class="aba" data-fase="oficial">Oficial</button>
     <button type="button" class="aba" data-visao="atualizacao">Atualização</button>
+    <button type="button" class="aba" data-visao="gestao">Eleições</button>
   </nav>
 
   <main>
@@ -84,6 +85,19 @@
         </div>
       </div>
       <p id="aviso" class="aviso" hidden></p>
+    </section>
+
+    <section id="gestao-secao" hidden>
+      <div class="cabecalho-resultado">
+        <h2>Eleições</h2>
+      </div>
+      <p class="resumo">Selecione as eleições que devem aparecer no sistema. As demais abas, o mapa e os quadros usam somente as marcadas como ativas.</p>
+      <p id="gestao-nota" class="resumo">A seleção fica salva enquanto a aplicação estiver no ar. Ao reiniciar o processo, todas as eleições voltam a ficar ativas.</p>
+      <div id="gestao-lista" class="lista-gestao"></div>
+      <div class="acoes-gestao">
+        <button type="button" id="salvar-gestao" class="botao">Salvar alterações</button>
+      </div>
+      <p id="gestao-aviso" class="aviso" hidden></p>
     </section>
 
     <section id="status-secao" hidden>

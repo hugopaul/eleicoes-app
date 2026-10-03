@@ -82,6 +82,71 @@ h1 { font-size: 1.8rem; font-weight: 650; }
   cursor: wait;
 }
 
+.lista-gestao {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.grupo-ano {
+  background: white;
+  border: 1px solid var(--linha);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.grupo-ano header,
+.item-eleicao {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+}
+
+.grupo-ano header {
+  background: var(--azul-claro);
+}
+
+.item-eleicao {
+  border-top: 1px solid var(--linha);
+}
+
+.item-eleicao input,
+.grupo-ano header input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--azul);
+}
+
+.item-eleicao strong,
+.grupo-ano header strong {
+  display: block;
+}
+
+.meta-eleicao {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--suave);
+  font-size: 0.88rem;
+}
+
+.selo-status.ativa {
+  background: #e5f6ef;
+  color: var(--destaque);
+}
+
+.selo-status.inativa {
+  background: #eef2f6;
+  color: var(--suave);
+}
+
+.acoes-gestao {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
 main {
   max-width: 1180px;
   margin: 0 auto;
@@ -193,20 +258,9 @@ main {
 
 .resultado-topo {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 0.85rem;
   align-items: center;
-}
-
-.posicao {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  background: var(--azul-claro);
-  color: var(--azul);
-  font-weight: 700;
 }
 
 .resultado-topo strong {
@@ -462,7 +516,7 @@ td:nth-child(3), td:nth-child(4), th:nth-child(3), th:nth-child(4) { text-align:
 
 @media (max-width: 900px) {
   .apuracao-layout .resultado-topo {
-    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
   }
   .apuracao-layout .resultado-numeros,
   .apuracao-layout .selo {
@@ -482,7 +536,7 @@ td:nth-child(3), td:nth-child(4), th:nth-child(3), th:nth-child(4) { text-align:
   .apuracao-layout .resultados { order: 3; }
   .mapa-lado { order: 4; }
   .resultado-topo {
-    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
   }
   .resultado-numeros, .selo { grid-column: 2; justify-self: start; text-align: left; }
 }

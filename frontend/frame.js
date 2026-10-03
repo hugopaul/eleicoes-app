@@ -1,4 +1,4 @@
-let fase = new URLSearchParams(location.search).get('fase') === 'oficial' ? 'oficial' : 'simulado';
+let fase = new URLSearchParams(location.search).get('fase') === 'simulado' ? 'simulado' : 'oficial';
 let origemUrl = true;
 
 const faseEl = document.querySelector('#fase');
@@ -108,7 +108,7 @@ function lerFiltros() {
   const atuais = new URLSearchParams(location.search);
   const cargo = atuais.get('cargo') || '';
   return {
-    fase: atuais.get('fase') === 'oficial' ? 'oficial' : 'simulado',
+    fase: atuais.get('fase') === 'simulado' ? 'simulado' : 'oficial',
     eleicao: atuais.get('eleicao') || '',
     cargo: cargo ? cargo.padStart(4, '0') : '',
     uf: (atuais.get('uf') || '').toLowerCase(),
@@ -143,7 +143,7 @@ async function carregarCatalogo() {
   const federal = eleicoes.find((eleicao) => eleicao.cargos?.some((cargo) => cargo.codigo === '0001'));
   if (pedida && eleicoes.some((eleicao) => String(eleicao.codigo) === pedida)) eleicaoEl.value = pedida;
   else if (pedida) {
-    avisar('Esta eleição não existe nesta fase.');
+    avisar('Esta eleição não está disponível. Ela pode estar inativa ou não existir nesta fase.');
     candidatosEl.replaceChildren();
     resumoEl.replaceChildren();
     resultadoResumo.hidden = true;
@@ -268,9 +268,6 @@ async function carregarResultado(atualizarMapa = true) {
         foto.addEventListener('error', () => foto.remove());
         topo.append(foto);
       }
-      const posicao = document.createElement('span');
-      posicao.className = 'posicao';
-      posicao.textContent = String(indice + 1);
       const identidade = document.createElement('div');
       const nome = document.createElement('strong');
       nome.textContent = `${candidato.numero ?? '—'} · ${candidato.nomeUrna || candidato.nome || 'Candidato'}`;
@@ -289,7 +286,7 @@ async function carregarResultado(atualizarMapa = true) {
       const selo = document.createElement('span');
       selo.className = `selo ${classeSituacao(candidato)}`.trim();
       selo.textContent = candidato.situacao ?? '—';
-      topo.append(posicao, identidade, numeros, selo);
+      topo.append(identidade, numeros, selo);
 
       const trilho = document.createElement('span');
       trilho.className = 'trilho';

@@ -17,6 +17,10 @@ const resumoEl = document.querySelector('#resumo-votos');
 const avisoEl = document.querySelector('#aviso');
 const eleicoesSecao = document.querySelector('#eleicoes-secao');
 const statusSecao = document.querySelector('#status-secao');
+const gestaoSecao = document.querySelector('#gestao-secao');
+const gestaoLista = document.querySelector('#gestao-lista');
+const gestaoAviso = document.querySelector('#gestao-aviso');
+const salvarGestaoBtn = document.querySelector('#salvar-gestao');
 const statusResumo = document.querySelector('#status-resumo');
 const statusArquivos = document.querySelector('#status-arquivos');
 const sincronizarBtn = document.querySelector('#sincronizar');
@@ -147,7 +151,7 @@ function pintarEleicoes() {
   if (!itens.length) {
     const vazio = document.createElement('p');
     vazio.className = 'resumo';
-    vazio.textContent = 'Nenhuma eleição deste tipo nesta fase.';
+    vazio.textContent = 'Nenhuma eleição deste tipo nesta fase. A aba Eleições define quais ficam visíveis.';
     eleicoesEl.append(vazio);
     return;
   }
@@ -303,9 +307,6 @@ async function carregarResultado(atualizarMapa = true) {
         foto.addEventListener('error', () => foto.remove());
         topo.append(foto);
       }
-      const posicao = document.createElement('span');
-      posicao.className = 'posicao';
-      posicao.textContent = String(indice + 1);
       const identidade = document.createElement('div');
       const nome = document.createElement('strong');
       nome.textContent = `${candidato.numero ?? '—'} · ${candidato.nomeUrna || candidato.nome || 'Candidato'}`;
@@ -324,7 +325,7 @@ async function carregarResultado(atualizarMapa = true) {
       const selo = document.createElement('span');
       selo.className = `selo ${situacao}`.trim();
       selo.textContent = candidato.situacao ?? '—';
-      topo.append(posicao, identidade, numeros, selo);
+      topo.append(identidade, numeros, selo);
 
       const trilho = document.createElement('span');
       trilho.className = 'trilho';
@@ -664,11 +665,152 @@ function horaLocal(iso) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(iso));
 }
 
+function mostrarVisao(visao) {
+  const catalogo = visao === 'catalogo';
+  eleicoesSecao.hidden = !catalogo;
+  statusSecao.hidden = visao !== 'atualizacao';
+  gestaoSecao.hidden = visao !== 'gestao';
+  if (!catalogo) {
+    painelSecao.hidden = true;
+    resultadoSecao.hidden = true;
+    mapaBloco.hidden = true;
+  }
+}
+
+function anoDaEleicao(eleicao) {
+  return eleicao.ano || eleicao.pleito?.ciclo?.match(/20\d{2}/)?.[0] || eleicao.pleito?.data?.match(/20\d{2}/)?.[0] || 'Sem ano';
+}
+
+function textoCargos(eleicao) {
+  const nomes = (eleicao.cargos ?? []).map((cargo) => cargo.nome).filter(Boolean);
+  return nomes.length ? nomes.join(', ') : 'Cargo não informado';
+}
+
+function atualizarGrupo(grupo) {
+  const itens = [...grupo.querySelectorAll('.item-eleicao')];
+  const marcadas = itens.filter((item) => item.querySelector('input').checked).length;
+  const cabecalho = grupo.querySelector('.ano-check');
+  cabecalho.checked = marcadas === itens.length && itens.length > 0;
+  cabecalho.indeterminate = marcadas > 0 && marcadas < itens.length;
+  const seloAno = grupo.querySelector('header .selo-status');
+  if (marcadas === itens.length) definirSelo(seloAno, true);
+  else if (marcadas === 0) definirSelo(seloAno, false);
+  else {
+    seloAno.textContent = 'PARCIAL';
+    seloAno.className = 'selo selo-status';
+  }
+  for (const item of itens) definirSelo(item.querySelector('.selo-status'), item.querySelector('input').checked);
+}
+
+function definirSelo(selo, ativa) {
+  selo.textContent = ativa ? 'ATIVA' : 'INATIVA';
+  selo.className = `selo selo-status ${ativa ? 'ativa' : 'inativa'}`;
+}
+
+function pintarGestao(itens) {
+  gestaoLista.replaceChildren();
+  if (!itens.length) {
+    const vazio = document.createElement('p');
+    vazio.className = 'resumo';
+    vazio.textContent = 'Nenhuma eleição encontrada nos catálogos carregados.';
+    gestaoLista.append(vazio);
+    return;
+  }
+  const grupos = new Map();
+  for (const eleicao of itens) {
+    const ano = anoDaEleicao(eleicao);
+    if (!grupos.has(ano)) grupos.set(ano, []);
+    grupos.get(ano).push(eleicao);
+  }
+  const anos = [...grupos.keys()].sort((a, b) => String(b).localeCompare(String(a), 'pt-BR'));
+  for (const ano of anos) {
+    const grupo = document.createElement('section');
+    grupo.className = 'grupo-ano';
+    const cabecalho = document.createElement('header');
+    const anoCheck = document.createElement('input');
+    anoCheck.type = 'checkbox';
+    anoCheck.className = 'ano-check';
+    anoCheck.setAttribute('aria-label', `Eleições ${ano}`);
+    const titulo = document.createElement('div');
+    const nome = document.createElement('strong');
+    nome.textContent = `Eleições ${ano}`;
+    const detalhe = document.createElement('span');
+    detalhe.className = 'meta-eleicao';
+    detalhe.textContent = 'Marca ou desmarca todas as eleições deste ano.';
+    titulo.append(nome, detalhe);
+    const seloAno = document.createElement('span');
+    seloAno.className = 'selo selo-status selo-ano';
+    cabecalho.append(anoCheck, titulo, seloAno);
+    grupo.append(cabecalho);
+    const eleicoesAno = grupos.get(ano).slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR') || String(a.codigo).localeCompare(String(b.codigo)));
+    for (const eleicao of eleicoesAno) {
+      const linha = document.createElement('label');
+      linha.className = 'item-eleicao';
+      const check = document.createElement('input');
+      check.type = 'checkbox';
+      check.checked = Boolean(eleicao.ativa);
+      check.dataset.fase = eleicao.fase;
+      check.dataset.codigo = eleicao.codigo;
+      check.addEventListener('change', () => atualizarGrupo(grupo));
+      const texto = document.createElement('div');
+      const forte = document.createElement('strong');
+      forte.textContent = eleicao.nome;
+      const meta = document.createElement('span');
+      meta.className = 'meta-eleicao';
+      const identificador = eleicao.sequencial ? `${eleicao.codigo} · seq. ${eleicao.sequencial}` : eleicao.codigo;
+      meta.textContent = `${eleicao.ano || ano} · ${eleicao.turno}º turno · ${eleicao.tipo?.descricao ?? 'Tipo não informado'} · ${textoCargos(eleicao)} · ${identificador} · ${eleicao.origem || eleicao.fase}`;
+      texto.append(forte, meta);
+      const selo = document.createElement('span');
+      selo.className = 'selo selo-status';
+      linha.append(check, texto, selo);
+      grupo.append(linha);
+    }
+    anoCheck.addEventListener('change', () => {
+      for (const item of grupo.querySelectorAll('.item-eleicao input')) item.checked = anoCheck.checked;
+      atualizarGrupo(grupo);
+    });
+    atualizarGrupo(grupo);
+    gestaoLista.append(grupo);
+  }
+}
+
+async function carregarGestao() {
+  mostrarVisao('gestao');
+  gestaoAviso.hidden = true;
+  const resposta = await fetch('/api/v1/eleicoes/gestao');
+  const corpo = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) throw new Error(corpo.erro?.mensagem || 'Não foi possível listar as eleições.');
+  pintarGestao(corpo.itens ?? []);
+}
+
+async function salvarGestao() {
+  const ativas = [...gestaoLista.querySelectorAll('.item-eleicao input:checked')].map((input) => ({
+    fase: input.dataset.fase,
+    codigo: input.dataset.codigo,
+  }));
+  salvarGestaoBtn.disabled = true;
+  gestaoAviso.hidden = true;
+  try {
+    const resposta = await fetch('/api/v1/eleicoes/gestao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ativas }),
+    });
+    const corpo = await resposta.json().catch(() => ({}));
+    if (!resposta.ok) throw new Error(corpo.erro?.mensagem || 'Não foi possível salvar.');
+    pintarGestao(corpo.itens ?? []);
+    gestaoAviso.hidden = false;
+    gestaoAviso.textContent = 'Alterações salvas. As outras páginas passam a usar somente as eleições ativas.';
+  } catch (erro) {
+    gestaoAviso.hidden = false;
+    gestaoAviso.textContent = erro.message;
+  } finally {
+    salvarGestaoBtn.disabled = false;
+  }
+}
+
 async function carregarStatus() {
-  eleicoesSecao.hidden = true;
-  painelSecao.hidden = true;
-  resultadoSecao.hidden = true;
-  statusSecao.hidden = false;
+  mostrarVisao('atualizacao');
   const dados = await obter('/api/v1/sincronizacao');
   const emAndamento = dados.executando ? ' · baixando agora' : '';
   sincronizarBtn.disabled = dados.executando;
@@ -688,10 +830,19 @@ async function carregarStatus() {
   }
 }
 
+salvarGestaoBtn.addEventListener('click', () => {
+  salvarGestao().catch((erro) => {
+    gestaoAviso.hidden = false;
+    gestaoAviso.textContent = erro.message;
+  });
+});
+
 for (const aba of document.querySelectorAll('.aba')) {
   aba.addEventListener('click', () => {
     for (const item of document.querySelectorAll('.aba')) item.classList.remove('ativa');
     aba.classList.add('ativa');
+    if (atualizacaoTimer) clearInterval(atualizacaoTimer);
+    atualizacaoTimer = null;
     if (aba.dataset.visao === 'atualizacao') {
       carregarStatus().catch((erro) => {
         statusResumo.textContent = erro.message;
@@ -703,15 +854,18 @@ for (const aba of document.querySelectorAll('.aba')) {
       }, 60000);
       return;
     }
-    if (atualizacaoTimer) clearInterval(atualizacaoTimer);
-    atualizacaoTimer = null;
+    if (aba.dataset.visao === 'gestao') {
+      carregarGestao().catch((erro) => {
+        gestaoAviso.hidden = false;
+        gestaoAviso.textContent = erro.message;
+      });
+      return;
+    }
     fase = aba.dataset.fase;
     eleicaoAtual = null;
-    statusSecao.hidden = true;
-    eleicoesSecao.hidden = false;
+    mostrarVisao('catalogo');
     painelSecao.hidden = true;
     resultadoSecao.hidden = true;
-    mapaBloco.hidden = true;
     carregarEleicoes().catch((erro) => {
       geracaoEl.textContent = erro.message;
     });

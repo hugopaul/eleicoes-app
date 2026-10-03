@@ -2,6 +2,7 @@ import { ConflictException, Controller, Get, HttpCode, Inject, Param, Post, Quer
 import { Response } from 'express';
 import { paginar } from '../common/util';
 import { ElectionStore } from '../store/election-store';
+import { SelecaoEleicoes } from '../store/selecao-eleicoes';
 import { AgendadorTse } from '../sync/agendador';
 import { erro } from './resposta';
 
@@ -11,6 +12,7 @@ export class OutrosController {
     private readonly store: ElectionStore,
     @Inject('STORE_OFICIAL') private readonly oficial: ElectionStore,
     private readonly agendador: AgendadorTse,
+    private readonly selecao: SelecaoEleicoes,
   ) {}
 
   private loja(fase?: string) {
@@ -53,12 +55,12 @@ export class OutrosController {
   pleito(@Param('codigo') codigo: string) {
     const pleito = this.store.pleito(codigo);
     if (!pleito) erro('NAO_ENCONTRADO', `Pleito ${codigo} não está no catálogo.`, 404);
-    return { ...pleito, geracao: this.store.geracaoCatalogo };
+    return { ...this.pleitoAtivo(pleito), geracao: this.store.geracaoCatalogo };
   }
 
   @Get('pleitos')
   pleitos(@Query('data') data?: string, @Query('pagina') pagina?: string, @Query('tamanho') tamanho?: string) {
-    let itens = this.store.pleitos;
+    let itens = this.store.pleitos.map((item) => this.pleitoAtivo(item));
     if (data) itens = itens.filter((item) => item.data === data);
     return { ...paginar(itens, pagina, tamanho), geracao: this.store.geracaoCatalogo };
   }
@@ -66,6 +68,13 @@ export class OutrosController {
   @Get('pleitos/:codigoPleito/ufs/:uf/municipios/:codigoMunicipio/zonas/:zona/secoes/:secao')
   secao() {
     return { auxiliar: null };
+  }
+
+  private pleitoAtivo<T extends { eleicoes: Array<{ codigo: string }> }>(pleito: T) {
+    return {
+      ...pleito,
+      eleicoes: pleito.eleicoes.filter((item) => this.selecao.ativa(this.store.geracaoCatalogo.fase, item.codigo)),
+    };
   }
 
   @Get('pleitos/:codigoPleito/ufs/:uf/secoes')
