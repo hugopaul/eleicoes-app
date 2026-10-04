@@ -61,19 +61,24 @@ export class AgendadorTse implements OnModuleInit, OnModuleDestroy {
   private iniciar(tentarAusentes: boolean): boolean {
     if (this.rodando) return false;
     this.rodando = true;
-    this.executar(tentarAusentes)
-      .catch((erro) => {
-        this.simulado.origemOk = false;
-        console.error('Falha na sincronização com o TSE', erro);
-      })
-      .finally(() => {
-        this.rodando = false;
-      });
+    this.executar(tentarAusentes).finally(() => {
+      this.rodando = false;
+    });
     return true;
   }
 
   private async executar(tentarAusentes: boolean) {
-    await sincronizarOrigem(this.simulado, this.origemSimulado(), this.etags, tentarAusentes);
-    await sincronizarOrigem(this.oficial, this.origemOficial(), this.etags, tentarAusentes);
+    await this.rodar(this.simulado, this.origemSimulado(), tentarAusentes);
+    await this.rodar(this.oficial, this.origemOficial(), tentarAusentes);
+  }
+
+  private async rodar(store: ElectionStore, origem: { base: string; ambiente: string }, tentarAusentes: boolean) {
+    try {
+      await sincronizarOrigem(store, origem, this.etags, tentarAusentes);
+    } catch (erro) {
+      store.origemOk = false;
+      const causa = erro instanceof Error && erro.cause instanceof Error ? `${erro.message}: ${erro.cause.message}` : erro instanceof Error ? erro.message : String(erro);
+      console.error(`Falha na sincronização com o TSE (${origem.base}): ${causa}`);
+    }
   }
 }

@@ -38,6 +38,7 @@ export async function sincronizarOrigem(store: ElectionStore, origem: OrigemTse,
     else if (catalogo.status === 304) store.marcarVerificado('ele-c.json');
     else if (catalogo.status !== 200) {
       store.origemOk = false;
+      if (catalogo.falha) console.error(`Falha na sincronização com o TSE (${hostDe(catalogoUrl)}): ${catalogo.falha}`);
       return;
     }
     const raw = store.catalogoRaw;
@@ -120,20 +121,40 @@ async function obterJson(store: ElectionStore, etags: Map<string, string>, tenta
   return resposta.status;
 }
 
-async function baixar(url: string, etags: Map<string, string>): Promise<{ status: number; json?: any }> {
+async function baixar(url: string, etags: Map<string, string>): Promise<{ status: number; json?: any; falha?: string }> {
   return naFila(() => buscar(url, etags));
 }
 
-async function buscar(url: string, etags: Map<string, string>): Promise<{ status: number; json?: any }> {
+async function buscar(url: string, etags: Map<string, string>): Promise<{ status: number; json?: any; falha?: string }> {
   const etag = etags.get(url);
   const headers: Record<string, string> = { Accept: 'application/json', 'User-Agent': 'eleicoes-api/0.1' };
   if (etag) headers['If-None-Match'] = etag;
-  const resposta = await fetch(url, { headers, signal: AbortSignal.timeout(20000) });
-  const novo = resposta.headers.get('etag');
-  if (novo) etags.set(url, novo);
-  if (resposta.status === 304 || resposta.status === 404) return { status: resposta.status };
-  if (!resposta.ok) return { status: resposta.status };
-  return { status: 200, json: await resposta.json() };
+  try {
+    const resposta = await fetch(url, { headers, signal: AbortSignal.timeout(20000) });
+    const novo = resposta.headers.get('etag');
+    if (novo) etags.set(url, novo);
+    if (resposta.status === 304 || resposta.status === 404) return { status: resposta.status };
+    if (!resposta.ok) return { status: resposta.status };
+    return { status: 200, json: await resposta.json() };
+  } catch (erro) {
+    return { status: 0, falha: detalhe(erro) };
+  }
+}
+
+function detalhe(erro: unknown): string {
+  if (erro instanceof Error) {
+    const causa = erro.cause instanceof Error ? erro.cause.message : '';
+    return causa ? `${erro.message}: ${causa}` : erro.message;
+  }
+  return String(erro);
+}
+
+function hostDe(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }
 
 function localizar(raw: any, codigo: string) {
