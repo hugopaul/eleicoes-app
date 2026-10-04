@@ -889,7 +889,7 @@ async function carregarStatus() {
   const dados = await obter('/api/v1/sincronizacao');
   const emAndamento = dados.executando ? ' · baixando agora' : '';
   sincronizarBtn.disabled = dados.executando;
-  statusResumo.textContent = `Fase ${dados.fase} · consulta ao TSE ao iniciar e a cada 5 minutos · última carga ${horaLocal(dados.ultimoCiclo)} · ${dados.arquivos.length} arquivo(s)${emAndamento}`;
+  statusResumo.textContent = `Fase ${dados.fase} · consulta ao TSE ao iniciar e a cada 2 minutos · última carga ${horaLocal(dados.ultimoCiclo)} · ${dados.arquivos.length} arquivo(s)${emAndamento}`;
   statusArquivos.replaceChildren();
   for (const arquivo of dados.arquivos) {
     const linha = document.createElement('tr');

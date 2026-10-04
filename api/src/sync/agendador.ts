@@ -16,7 +16,7 @@ export class AgendadorTse implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     if (process.env.JEST_WORKER_ID || process.env.SYNC_HABILITADO === 'false') return;
-    const intervalo = Number(process.env.SYNC_INTERVALO_SEG ?? 300) * 1000;
+    const intervalo = Number(process.env.SYNC_INTERVALO_SEG ?? 120) * 1000;
     this.disparar();
     this.timer = setInterval(() => this.disparar(), intervalo);
   }

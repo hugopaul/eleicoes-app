@@ -87,7 +87,7 @@ Não baixa boletim de urna, RDV, log, fotos nem o arquivo auxiliar de seção.
 
 ## Mecanismo de atualização
 
-O agendador sobe junto com a API, faz um ciclo na hora e repete no intervalo configurado. O padrão é 5 minutos (`SYNC_INTERVALO_SEG=300`). Simulado e oficial rodam no mesmo ciclo, um depois do outro. Se o ciclo anterior ainda não terminou, o próximo é ignorado.
+O agendador sobe junto com a API, faz um ciclo na hora e repete no intervalo configurado. O padrão é 2 minutos (`SYNC_INTERVALO_SEG=120`). Simulado e oficial rodam no mesmo ciclo, um depois do outro. Se o ciclo anterior ainda não terminou, o próximo é ignorado.
 
 Para cada arquivo:
 
@@ -144,7 +144,7 @@ Códigos: `PARAMETRO_INVALIDO` (400), `NAO_ENCONTRADO` e `NAO_PUBLICADO` (404), 
 | --- | --- | --- |
 | `PORT` | `3000` | Porta HTTP |
 | `FRONTEND_ORIGIN` | qualquer origem | CORS. Métodos `GET`, `POST` e `OPTIONS` |
-| `SYNC_INTERVALO_SEG` | `300` | Intervalo entre ciclos |
+| `SYNC_INTERVALO_SEG` | `120` | Intervalo entre ciclos |
 | `SYNC_INTERVALO_MINIMO_MS` | `200` | Pausa entre arquivos |
 | `SYNC_HABILITADO` | ligado | `false` desliga o agendador |
 | `TSE_SIMULADO_BASE` | `https://resultados-sim.tse.jus.br/simulado` | Host do simulado |
