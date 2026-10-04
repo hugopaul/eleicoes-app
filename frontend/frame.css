@@ -76,8 +76,23 @@ body.frame {
   background: var(--fundo);
 }
 
-body.frame .frame-barra {
+body.frame .frame-barra,
+body.frame .urnas {
   flex: none;
+}
+
+body.frame .urnas {
+  padding: 0.5rem 0.75rem 0.6rem;
+}
+
+body.frame .confirma-filtro {
+  margin-top: 0;
+  padding: 0.6rem 0.75rem;
+}
+
+body.frame .urnas-numeros [data-qtd],
+body.frame .urnas-pct {
+  font-size: 1.05rem;
 }
 
 body.frame main {

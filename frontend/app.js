@@ -31,6 +31,8 @@ const mapaNota = document.querySelector('#mapa-nota');
 const mapaLegenda = document.querySelector('#mapa-legenda');
 const mapaDetalhe = document.querySelector('#mapa-detalhe');
 const mapaTitulo = document.querySelector('#mapa-titulo');
+const urnasEl = document.querySelector('#urnas-apuradas');
+const confirmaFiltroEl = document.querySelector('#confirma-filtro');
 
 let eleicaoAtual = null;
 let eleicoesCarregadas = [];
@@ -260,6 +262,7 @@ async function prepararMunicipios() {
 }
 
 async function carregarResultado(atualizarMapa = true) {
+  confirmarFiltro();
   avisoEl.hidden = true;
   candidatosEl.replaceChildren();
   resumoEl.replaceChildren();
@@ -269,12 +272,14 @@ async function carregarResultado(atualizarMapa = true) {
   if (eleicaoMunicipal() && !municipioEl.value) {
     avisoEl.hidden = false;
     avisoEl.textContent = 'Selecione um município. A lista aparece quando o arquivo de municípios desta eleição tiver sido baixado.';
+    limparUrnas();
     if (atualizarMapa) await carregarMapa();
     return;
   }
   const uf = cargo === '0001' ? '' : `?uf=${ufEl.value}${eleicaoMunicipal() ? `&municipio=${municipioEl.value}` : ''}`;
   try {
     const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/resultados/${cargo}${uf}`);
+    pintarUrnas(dados.apuracao?.secoes, rotuloUrnas());
     const votos = dados.votos ?? {};
     const abrangencia = dados.abrangencia.codigo?.toUpperCase() === 'BR' ? 'Brasil' : dados.abrangencia.codigo?.toUpperCase();
     resultadoTitulo.textContent = dados.totalizacaoFinal ? 'Resultado definido' : 'Resultado preliminar';
@@ -337,6 +342,7 @@ async function carregarResultado(atualizarMapa = true) {
       candidatosEl.append(cartao);
     });
   } catch (erro) {
+    limparUrnas();
     avisoEl.hidden = false;
     avisoEl.textContent = erro.message;
   }
@@ -356,6 +362,75 @@ function mostrarSubtituloEleicao() {
   linha.textContent = `${data} · ${eleicaoAtual.turno}º turno · ${eleicaoAtual.tipo.descricao}`;
   subtituloEleicaoEl.replaceChildren(nome, linha);
   subtituloEleicaoEl.hidden = false;
+}
+
+function limparUrnas() {
+  urnasEl.hidden = true;
+}
+
+function ocultarConfirmacao() {
+  confirmaFiltroEl.hidden = true;
+}
+
+function confirmarFiltro() {
+  if (!eleicaoAtual || !cargoEl.value) {
+    ocultarConfirmacao();
+    return;
+  }
+  const cargo = cargoEl.selectedOptions[0]?.textContent || 'Cargo';
+  const partes = [`Cargo: ${cargo}`];
+  let dica = 'Veja se o cargo é o que você quer consultar. Neste cargo o recorte é o Brasil.';
+  if (cargoEl.value === '0001') {
+    partes.push('Estado: Brasil');
+  } else {
+    const sigla = String(ufEl.value || '').toLowerCase();
+    const estado = NOMES_UF[sigla] || ufEl.selectedOptions[0]?.textContent || sigla.toUpperCase() || 'não escolhido';
+    partes.push(`Estado: ${estado}`);
+    if (eleicaoMunicipal()) {
+      const municipio = municipioEl.selectedOptions[0]?.textContent;
+      if (municipio) partes.push(`Município: ${municipio}`);
+      dica = 'Veja se o cargo, o estado e o município são os que você quer consultar.';
+    } else {
+      dica = 'Veja se o cargo e o estado são os que você quer consultar.';
+    }
+  }
+  const texto = partes.join(' · ');
+  const resumo = confirmaFiltroEl.querySelector('[data-resumo]');
+  const mudou = resumo.textContent !== texto;
+  resumo.textContent = texto;
+  confirmaFiltroEl.querySelector('[data-dica]').textContent = dica;
+  confirmaFiltroEl.hidden = false;
+  if (mudou) {
+    confirmaFiltroEl.classList.remove('atualizado');
+    void confirmaFiltroEl.offsetWidth;
+    confirmaFiltroEl.classList.add('atualizado');
+  }
+}
+
+function rotuloUrnas() {
+  if (cargoEl.value === '0001') return 'Brasil';
+  if (eleicaoMunicipal() && municipioEl.selectedOptions[0]) return municipioEl.selectedOptions[0].textContent;
+  const sigla = String(ufEl.value || '').toLowerCase();
+  return NOMES_UF[sigla] || sigla.toUpperCase();
+}
+
+function pintarUrnas(secoes, lugar) {
+  const apuradas = secoes?.apuradas;
+  const total = secoes?.total;
+  if (apuradas == null || total == null) {
+    limparUrnas();
+    return;
+  }
+  const progresso = total > 0 ? Math.max(0, Math.min(100, (apuradas / total) * 100)) : 0;
+  urnasEl.hidden = false;
+  urnasEl.querySelector('[data-lugar]').textContent = lugar || '';
+  urnasEl.querySelector('[data-qtd]').textContent = numero.format(apuradas);
+  urnasEl.querySelector('[data-total]').textContent = `de ${numero.format(total)}`;
+  urnasEl.querySelector('[data-pct]').textContent = `${percentual.format(progresso)}%`;
+  urnasEl.querySelector('[data-barra]').style.width = `${progresso}%`;
+  const trilho = urnasEl.querySelector('[role="progressbar"]');
+  trilho.setAttribute('aria-valuenow', String(Math.round(progresso)));
+  trilho.setAttribute('aria-valuetext', `${numero.format(apuradas)} de ${numero.format(total)} urnas apuradas`);
 }
 
 function formatarPar(parte, total) {
@@ -863,6 +938,8 @@ for (const aba of document.querySelectorAll('.aba')) {
     }
     fase = aba.dataset.fase;
     eleicaoAtual = null;
+    limparUrnas();
+    ocultarConfirmacao();
     mostrarVisao('catalogo');
     painelSecao.hidden = true;
     resultadoSecao.hidden = true;

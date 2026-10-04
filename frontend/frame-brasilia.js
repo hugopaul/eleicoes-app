@@ -18,6 +18,8 @@ const resumoEl = document.querySelector('#resumo-votos');
 const avisoEl = document.querySelector('#aviso');
 const mapaBloco = document.querySelector('#mapa-bloco');
 const mapaSvg = document.querySelector('#mapa-df');
+const urnasEl = document.querySelector('#urnas-apuradas');
+const confirmaFiltroEl = document.querySelector('#confirma-filtro');
 
 const IBGE_UF = {
   '17': 'to', '29': 'ba', '31': 'mg', '35': 'sp', '50': 'ms', '51': 'mt', '52': 'go', '53': 'df',
@@ -125,6 +127,8 @@ async function carregarCatalogo() {
     eleicaoAtual = null;
     eleicaoCampo.hidden = true;
     limparResultado();
+    limparUrnas();
+    ocultarConfirmacao();
     avisar('Não há eleição do Distrito Federal nesta fase.');
     sincronizarUrl();
     return;
@@ -149,6 +153,8 @@ async function selecionarEleicao() {
   cargoEl.replaceChildren();
   if (!eleicaoAtual) {
     avisar('Nenhuma eleição do Distrito Federal disponível nesta fase.');
+    limparUrnas();
+    ocultarConfirmacao();
     return;
   }
   eleicaoNome.textContent = `${eleicaoAtual.turno}º turno`;
@@ -170,15 +176,19 @@ async function selecionarEleicao() {
 
 async function carregarResultado() {
   const atual = ++pedido;
+  confirmarFiltro();
   avisar('');
   limparResultado();
   if (!eleicaoAtual || !cargoEl.value) {
+    limparUrnas();
+    ocultarConfirmacao();
     sincronizarUrl();
     return;
   }
   try {
     const dados = await obter(`/api/v1/eleicoes/${eleicaoAtual.codigo}/resultados/${cargoEl.value}?uf=${UF}`);
     if (atual !== pedido) return;
+    pintarUrnas(dados.apuracao?.secoes, 'Distrito Federal');
     const votos = dados.votos ?? {};
     resultadoTitulo.textContent = dados.totalizacaoFinal ? 'Resultado definido' : 'Resultado preliminar';
     resultadoResumo.hidden = false;
@@ -234,9 +244,58 @@ async function carregarResultado() {
       candidatosEl.append(cartao);
     });
   } catch (erro) {
-    if (atual === pedido) avisar(erro.message);
+    if (atual === pedido) {
+      limparUrnas();
+      avisar(erro.message);
+    }
   }
   if (atual === pedido) sincronizarUrl();
+}
+
+function limparUrnas() {
+  urnasEl.hidden = true;
+}
+
+function ocultarConfirmacao() {
+  confirmaFiltroEl.hidden = true;
+}
+
+function confirmarFiltro() {
+  if (!eleicaoAtual || !cargoEl.value) {
+    ocultarConfirmacao();
+    return;
+  }
+  const cargo = cargoEl.selectedOptions[0]?.textContent || 'Cargo';
+  const texto = `Cargo: ${cargo} · Estado: Distrito Federal`;
+  const resumo = confirmaFiltroEl.querySelector('[data-resumo]');
+  const mudou = resumo.textContent !== texto;
+  resumo.textContent = texto;
+  confirmaFiltroEl.querySelector('[data-dica]').textContent = 'Veja se o cargo é o que você quer consultar. O estado deste quadro é o Distrito Federal.';
+  confirmaFiltroEl.hidden = false;
+  if (mudou) {
+    confirmaFiltroEl.classList.remove('atualizado');
+    void confirmaFiltroEl.offsetWidth;
+    confirmaFiltroEl.classList.add('atualizado');
+  }
+}
+
+function pintarUrnas(secoes, lugar) {
+  const apuradas = secoes?.apuradas;
+  const total = secoes?.total;
+  if (apuradas == null || total == null) {
+    limparUrnas();
+    return;
+  }
+  const progresso = total > 0 ? Math.max(0, Math.min(100, (apuradas / total) * 100)) : 0;
+  urnasEl.hidden = false;
+  urnasEl.querySelector('[data-lugar]').textContent = lugar || '';
+  urnasEl.querySelector('[data-qtd]').textContent = numero.format(apuradas);
+  urnasEl.querySelector('[data-total]').textContent = `de ${numero.format(total)}`;
+  urnasEl.querySelector('[data-pct]').textContent = `${percentual.format(progresso)}%`;
+  urnasEl.querySelector('[data-barra]').style.width = `${progresso}%`;
+  const trilho = urnasEl.querySelector('[role="progressbar"]');
+  trilho.setAttribute('aria-valuenow', String(Math.round(progresso)));
+  trilho.setAttribute('aria-valuetext', `${numero.format(apuradas)} de ${numero.format(total)} urnas apuradas`);
 }
 
 function aneisDe(geometria) {

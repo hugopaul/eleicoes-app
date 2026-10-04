@@ -33,7 +33,29 @@
     </div>
   </header>
 
+  <section id="urnas-apuradas" class="urnas" hidden>
+    <div class="urnas-cabeca">
+      <p class="urnas-rotulo">Urnas apuradas<span data-lugar></span></p>
+      <p class="urnas-numeros">
+        <b data-qtd>0</b>
+        <span data-total>de 0</span>
+        <b data-pct class="urnas-pct">0%</b>
+      </p>
+    </div>
+    <div class="urnas-trilho" role="progressbar" aria-label="Urnas apuradas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <span data-barra class="urnas-barra"></span>
+    </div>
+  </section>
+
   <main>
+    <aside id="confirma-filtro" class="confirma-filtro" hidden role="status" aria-live="polite">
+      <span class="confirma-marca" aria-hidden="true"></span>
+      <div>
+        <p class="confirma-titulo">Confira o filtro</p>
+        <p class="confirma-texto" data-resumo></p>
+        <p class="confirma-dica" data-dica></p>
+      </div>
+    </aside>
     <p id="aviso" class="aviso" hidden></p>
     <div class="apuracao-layout apuracao-df">
       <div id="mapa-bloco" class="mapa-bloco mapa-df">

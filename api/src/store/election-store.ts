@@ -125,6 +125,7 @@ export class ElectionStore {
       return false;
     }
     const resultado = parseResultado(raw);
+    if (resultado.abrangencia.codigo) resultado.abrangencia.codigo = resultado.abrangencia.codigo.toLowerCase();
     resultado.ufFoto = ufDoArquivo(nome, resultado.abrangencia.codigo);
     this.resultados.set(`${resultado.eleicao}:${resultado.cargo.codigo}:${resultado.abrangencia.codigo}`, resultado);
     this.regravacoes += 1;

@@ -1,6 +1,6 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ElectionStore } from '../store/election-store';
-import { baixarResultadoMunicipal, sincronizarOrigem } from './tse-sync';
+import { baixarResultadoMunicipal, baixarResultadoUf, sincronizarOrigem } from './tse-sync';
 
 @Injectable()
 export class AgendadorTse implements OnModuleInit, OnModuleDestroy {
@@ -32,6 +32,11 @@ export class AgendadorTse implements OnModuleInit, OnModuleDestroy {
   garantirMunicipal(fase: string | undefined, eleicao: string, cargo: string, uf: string, municipio: string): Promise<number> {
     const oficial = fase === 'oficial';
     return baixarResultadoMunicipal(oficial ? this.oficial : this.simulado, oficial ? this.origemOficial() : this.origemSimulado(), this.etags, true, eleicao, cargo, uf, municipio);
+  }
+
+  garantirResultadoUf(fase: string | undefined, eleicao: string, cargo: string, uf: string): Promise<number> {
+    const oficial = fase === 'oficial';
+    return baixarResultadoUf(oficial ? this.oficial : this.simulado, oficial ? this.origemOficial() : this.origemSimulado(), this.etags, true, eleicao, cargo, uf);
   }
 
   private origemSimulado() {

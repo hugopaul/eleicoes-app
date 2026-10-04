@@ -43,6 +43,7 @@ export async function sincronizarOrigem(store: ElectionStore, origem: OrigemTse,
     const raw = store.catalogoRaw;
     if (!raw) return;
 
+    const distritais: Array<{ contexto: { ciclo?: string; eleicao: string; pleito: string }; codigoArquivo: string }> = [];
     for (const eleicao of store.eleicoes) {
       const contexto = localizar(raw, eleicao.codigo);
       if (!contexto) continue;
@@ -61,6 +62,10 @@ export async function sincronizarOrigem(store: ElectionStore, origem: OrigemTse,
 
       const municipal = eleicao.tipo.codigo === 3 || eleicao.tipo.codigo === 4;
       for (const cargo of eleicao.cargos) {
+        if (cargo.codigo === '0008') {
+          distritais.push({ contexto, codigoArquivo });
+          continue;
+        }
         if (municipal) {
           for (const uf of abrangencias) {
             const capital = store.listarMunicipios(eleicao.codigo, uf).map(([, item]) => item).find((item) => item?.capital);
@@ -83,6 +88,11 @@ export async function sincronizarOrigem(store: ElectionStore, origem: OrigemTse,
           }
         }
       }
+    }
+    for (const item of distritais) {
+      store.arquivosAusentes.delete(`resultado:${item.contexto.eleicao}:0008`);
+      const nome = `df-c0008-e${item.codigoArquivo}-u.json`;
+      await obterJson(store, etags, tentarAusentes, 'Resultado', urlArquivo(origem, raw, 'u', item.contexto, 'df', nome), nome, (json) => store.ingerirResultado(json, nome));
     }
     store.origemOk = true;
     store.ultimoCiclo = new Date().toISOString();
@@ -133,6 +143,16 @@ function localizar(raw: any, codigo: string) {
     }
   }
   return null;
+}
+
+export async function baixarResultadoUf(store: ElectionStore, origem: OrigemTse, etags: Map<string, string>, tentarAusentes: boolean, eleicao: string, cargo: string, uf: string): Promise<number> {
+  const raw = store.catalogoRaw;
+  const contexto = raw ? localizar(raw, eleicao) : null;
+  if (!contexto) return 0;
+  const sigla = uf.toLowerCase();
+  const nome = `${sigla}-c${cargo}-e${pad(eleicao, 6)}-u.json`;
+  if (store.resultado(eleicao, cargo, sigla)) return 200;
+  return obterJson(store, etags, tentarAusentes, 'Resultado', urlArquivo(origem, raw, 'u', contexto, sigla, nome), nome, (json) => store.ingerirResultado(json, nome));
 }
 
 export async function baixarResultadoMunicipal(store: ElectionStore, origem: OrigemTse, etags: Map<string, string>, tentarAusentes: boolean, eleicao: string, cargo: string, uf: string, municipio: string): Promise<number> {

@@ -236,6 +236,9 @@ export class EleicoesController {
       return loja.aplicarFotos(resultado!);
     }
     const abrangencia = uf ? uf.toLowerCase() : 'br';
+    if (abrangencia === 'df' && cargo !== '0008' && !loja.resultado(codigo, cargo, 'df')) {
+      await this.agendador.garantirResultadoUf(fase, codigo, cargo, 'df');
+    }
     if (!uf && !loja.resultado(codigo, cargo, 'br')) {
       erro('PARAMETRO_INVALIDO', `Informe a UF para o cargo ${cargo}.`, 400);
     }
